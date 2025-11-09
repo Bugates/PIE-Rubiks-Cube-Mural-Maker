@@ -1,23 +1,28 @@
-"""
-serial_communication.py
-Raspberry Pi broadcast script for multiple Arduinos.
-
-Sends all cube commands at once.  
-Each Arduino filters by its BOARD_ID and executes its own moves.
-"""
-
+#!/usr/bin/env python3
 import serial, time, glob, sys
 
 BAUD = 9600
+
 COMMANDS = [
-    "1, R",   
-    "2, G",  
-    "1, Y",   
-    "END"   
+    "1, R", "2, Y", "1, W", "2, O", "1, G", "2, R",
+    "1, Y", "2, W", "1, O", "2, G", "1, R", "2, Y",
+    "1, W", "2, O", "1, G", "2, R", "1, Y", "2, W",
+    "1, O", "2, G", "1, R", "2, Y", "1, W", "2, O",
+    "1, G", "2, R", "1, Y", "2, W", "1, O", "2, G",
+    "1, R", "2, Y", "1, W", "2, O", "1, G", "2, R",
+    "1, Y", "2, W", "1, O", "2, G", "1, R", "2, Y",
+    "1, W", "2, O", "1, G", "2, R", "1, Y", "2, W",
+    "1, O", "2, G", "1, R", "2, Y", "1, W", "2, O",
+    "1, G", "2, R", "1, Y", "2, W", "1, O", "2, G",
+    "1, R", "2, Y", "1, W", "2, O", "1, G", "2, R",
+    "1, Y", "2, W", "1, O", "2, G", "1, R", "2, Y",
+    "1, W", "2, O", "1, G", "2, R", "1, Y", "2, W",
+    "1, O", "2, G", "1, R", "2, Y", "1, W", "2, O",
+    "1, G", "2, R", "1, Y", "2, W", "1, O", "2, G",
+    "END"
 ]
 
 def find_ports():
-    """Return list of likely Arduino serial ports."""
     return glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
 
 def main():
@@ -32,7 +37,7 @@ def main():
     for port in ports:
         try:
             s = serial.Serial(port, BAUD, timeout=1)
-            time.sleep(2)  # allow Arduino reset
+            time.sleep(2)
             serials.append(s)
         except Exception as e:
             print(f"Could not open {port}: {e}")
@@ -46,7 +51,8 @@ def main():
         for s in serials:
             s.write(line.encode())
         print("Sent:", cmd)
-    print(" All commands broadcast.\n")
+
+    print("All commands broadcast.\n")
 
     t0 = time.time()
     while time.time() - t0 < 3:
@@ -58,8 +64,10 @@ def main():
                         print(f"{s.port}: {msg}")
                 except:
                     pass
+
     for s in serials:
         s.close()
+
     print("Finished.")
 
 if __name__ == "__main__":
