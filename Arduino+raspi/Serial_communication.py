@@ -23,7 +23,7 @@ def find_ports():
 def main():
     ports = find_ports()
     if not ports:
-        print("❌ No Arduino ports found.")
+        print("No Arduino ports found.")
         sys.exit(1)
 
     print("Found ports:", ports)
@@ -35,18 +35,18 @@ def main():
             time.sleep(2)  # allow Arduino reset
             serials.append(s)
         except Exception as e:
-            print(f"⚠️ Could not open {port}: {e}")
+            print(f"Could not open {port}: {e}")
 
     if not serials:
-        print("❌ No serial connections opened.")
+        print("No serial connections opened.")
         sys.exit(1)
 
     for cmd in COMMANDS:
         line = cmd.strip() + "\n"
         for s in serials:
             s.write(line.encode())
-        print("➡️  Sent:", cmd)
-    print("✅ All commands broadcast.\n")
+        print("Sent:", cmd)
+    print(" All commands broadcast.\n")
 
     t0 = time.time()
     while time.time() - t0 < 3:
@@ -60,7 +60,7 @@ def main():
                     pass
     for s in serials:
         s.close()
-    print("🔚 Finished.")
+    print("Finished.")
 
 if __name__ == "__main__":
     main()
