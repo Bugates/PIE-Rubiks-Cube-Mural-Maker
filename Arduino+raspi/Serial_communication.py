@@ -50,7 +50,7 @@ def main():
         for s in serials:
             s.write(line.encode())
         print("Sent:", cmd)
-        time.sleep(0.05)  # give Arduino buffer time
+        time.sleep(0.05)  #gaaaive Arduino buffer time
 
     print("All commands broadcast.\n")
 
