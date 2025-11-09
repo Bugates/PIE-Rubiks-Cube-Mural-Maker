@@ -1,0 +1,14 @@
+[Unit]
+Description=Send Cube Moves to Arduino on Boot
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/pi/send_moves_to_Arduino.py
+WorkingDirectory=/home/pi
+StandardOutput=append:/home/pi/sendmoves_log.txt
+StandardError=append:/home/pi/sendmoves_log.txt
+Restart=always
+User=pi
+
+[Install]
+WantedBy=multi-user.target
