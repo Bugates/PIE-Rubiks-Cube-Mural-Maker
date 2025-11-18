@@ -16,6 +16,20 @@ COMMANDS = [
     "END"
 ]
 
+COMMANDS = [
+    "2, WB",
+    "2, WB",
+    "1, GF",
+    "2, OF",
+    "1, GF",
+    "1, GF",
+    "2, OB",
+    "1, YF",
+    "1, RB",
+    "2, OF",
+    "END"
+]
+
 def find_ports():
     return glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
 
