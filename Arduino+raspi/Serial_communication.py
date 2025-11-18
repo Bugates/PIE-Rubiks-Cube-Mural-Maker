@@ -16,10 +16,6 @@ COMMANDS = [
     "END"
 ]
 
-COMMANDS = COMMANDS[-2::-1]
-COMMANDS.append("END")
-print(COMMANDS)
-
 def find_ports():
     return glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
 
