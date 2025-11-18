@@ -4,29 +4,18 @@ BAUD = 9600
 
 COMMANDS = [
     "2, OB",
-    "2, OB",
-    "2, OB",
-    "1, RB",
+    "1, RF",
     "1, YB",
-    "1, YB",
-    "1, YB",
-    "2, OB",
-    "1, GB",
-    "1, GB",
-    "1, GB",
-    "1, GB",
+    "2, OF",
     "1, GB",
     "1, GB",
     "2, OB",
-    "2, OB",
-    "2, OB",
     "1, GB",
-    "1, GB",
-    "1, GB",
-    "2, WB",
-    "2, WB",
+    "2, WF",
+    "2, WF",
     "END"
 ]
+
 
 def find_ports():
     return glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
