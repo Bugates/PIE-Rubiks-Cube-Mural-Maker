@@ -3,8 +3,10 @@ import serial, time, glob, sys
 
 BAUD = 9600
 
+# -----------------------------
+# FIXED: Proper COMMANDS list
+# -----------------------------
 COMMANDS = [
-    COMMANDS = [
     "2, OB",
     "1, RF",
     "1, YB",
@@ -21,21 +23,36 @@ COMMANDS = [
 def find_ports():
     return glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
 
+
+def read_all_available(s):
+    """
+    Reads ALL pending messages from a serial port.
+    Returns list of decoded strings.
+    """
+    msgs = []
+    while s.in_waiting:
+        try:
+            msg = s.readline().decode(errors="ignore").strip()
+            if msg:
+                msgs.append(msg)
+        except:
+            pass
+    return msgs
+
+
 def wait_for_done(serials):
     """
     BLOCKS until ANY Arduino prints 'DONE'.
+    Also prints ALL intermediate messages.
     """
     print("  Waiting for DONE...")
+
     while True:
         for s in serials:
-            if s.in_waiting:
-                try:
-                    msg = s.readline().decode(errors="ignore").strip()
-                except:
-                    msg = ""
-                if msg:
-                    print(f"    {s.port}: {msg}")
-                if msg == "DONE":
+            msgs = read_all_available(s)
+            for m in msgs:
+                print(f"    {s.port}: {m}")
+                if m == "DONE":
                     return
 
 
@@ -51,7 +68,7 @@ def main():
     for port in ports:
         try:
             s = serial.Serial(port, BAUD, timeout=1)
-            time.sleep(2)  # allow Arduino reset
+            time.sleep(2)  # allow Arduino to auto-reset
             serials.append(s)
         except Exception as e:
             print(f"Could not open {port}: {e}")
@@ -60,39 +77,44 @@ def main():
         print("No serial connections opened.")
         sys.exit(1)
 
-    # ---- NEW LOGIC: Send → Wait for DONE → Send next ----
+    # --------------------------------------------
+    # Send → read prints → wait for DONE → repeat
+    # --------------------------------------------
     for cmd in COMMANDS:
         line = cmd.strip() + "\n"
-        
-        # Send to all Arduinos
+
+        # Send command to all Arduinos
         for s in serials:
             s.write(line.encode())
 
         print("\nSent:", cmd)
 
-        # If END, stop sending
+        # Stop sending at END
         if cmd == "END":
             break
 
-        # BLOCK until Arduino says DONE
+        # Drain initial prints
+        time.sleep(0.05)
+        for s in serials:
+            msgs = read_all_available(s)
+            for m in msgs:
+                print(f"    {s.port}: {m}")
+
+        # Wait until any Arduino prints DONE
         wait_for_done(serials)
 
-        # tiny safety delay
+        # small safety delay
         time.sleep(0.05)
 
     print("\nAll commands completed.")
 
-    # Read any trailing messages
+    # Read trailing messages for 2 seconds
     t0 = time.time()
-    while time.time() - t0 < 3:
+    while time.time() - t0 < 2:
         for s in serials:
-            if s.in_waiting:
-                try:
-                    msg = s.readline().decode(errors="ignore").strip()
-                    if msg:
-                        print(f"{s.port}: {msg}")
-                except:
-                    pass
+            msgs = read_all_available(s)
+            for m in msgs:
+                print(f"{s.port}: {m}")
 
     for s in serials:
         s.close()
