@@ -3,18 +3,27 @@ import serial, time, glob, sys
 
 BAUD = 9600
 
-# -----------------------------
-# FIXED: Proper COMMANDS list
-# -----------------------------
 COMMANDS = [
-    "2, OB",
-    "1, RF",
-    "1, YB",
     "2, OF",
-    "1, GB",
-    "1, GB",
-    "2, OB",
-    "1, GB",
+    "2, OF",
+    "2, OF",
+    "1, RF",
+    "1, YF",
+    "1, YF",
+    "1, YF",
+    "2, OF",
+    "1, GF",
+    "1, GF",
+    "1, GF",
+    "1, GF",
+    "1, GF",
+    "1, GF",
+    "2, OF",
+    "2, OF",
+    "2, OF",
+    "1, GF",
+    "1, GF",
+    "1, GF",
     "2, WF",
     "2, WF",
     "END"
