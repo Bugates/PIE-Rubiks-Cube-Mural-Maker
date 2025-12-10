@@ -1,39 +1,3 @@
-#!/usr/bin/env python3
-"""
-Rubik's Cube U-face mural solver + web UI + QR code + Arduino runner.
-
-Key points:
-- No Flask: uses http.server (works great on Raspberry Pi).
-- Web UI: draw a 3×3 pattern for the TOP (U) face using r/o/b/g/w/y.
-- Solver:
-    * True 54-sticker cube model with RLFB+D moves.
-    * Mural is ALWAYS on the U (top) face.
-    * Uses real Rubik color cycles:
-        Opposites: r<->o, w<->y, b<->g
-        Base scheme: U=w, D=y, F=g, B=b, R=r, L=o
-      and enumerates all 24 legal cube orientations.
-    * For a given pattern:
-        - Fix Up = center color of the pattern.
-        - Consider all orientations with that Up color.
-        - For each orientation, solve for U face with RLFB+D.
-        - Pick the orientation with the SHORTEST move sequence.
-
-- Moves -> Serial commands:
-    R/L/F/B moves -> Arduino 1: "1, RF", "1, LB", etc.
-    D moves       -> Arduino 2: "2, DF", "2, DB".
-    "F"  / "R"  / "L"  / "B" / "D"  = clockwise
-    "F'" / "R'" / "L'" / "B'" / "D'" = counter-clockwise
-
-- Prints a URL + ASCII QR code in the terminal so people can connect
-  from their phones/laptops, draw the pattern, and see the moves.
-
-- UI flow:
-    Page 1: Draw ANY U face (no guidance; arbitrary patterns allowed).
-    Page 2: Run the solver search (shows ERROR if pattern is not solvable).
-    Page 3: Place cube (show orientation + original pattern).
-    Page 4: Run solver motors + finish and go back to drawing.
-"""
-
 import json
 import socket
 import time
