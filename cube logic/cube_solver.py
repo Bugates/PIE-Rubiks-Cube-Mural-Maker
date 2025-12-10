@@ -255,7 +255,7 @@ def build_state_for_orientation(ori: Dict[str, str]) -> str:
 
 
 def up_matches(state: str, target_face: List[List[str]]) -> bool:
-    """Check if the U (top) face matches the 3×3 target pattern."""
+    """Check if the U (top) face matches the 3Ã—3 target pattern."""
     for pos in range(9):
         if state[U_FACE_IDX[pos]] != target_face[pos // 3][pos % 3]:
             return False
@@ -356,8 +356,8 @@ def moves_to_serial(moves: List[str]) -> List[str]:
             direction = 'F' if clockwise else 'B'
         else:
             # R/L/F/B should be REVERSED
-            # Normal: clockwise → F, ccw → B
-            # Now:    clockwise → B, ccw → F
+            # Normal: clockwise â†’ F, ccw â†’ B
+            # Now:    clockwise â†’ B, ccw â†’ F
             direction = 'B' if clockwise else 'F'
 
         cmds.append(f"{board}, {face}{direction}")
@@ -368,7 +368,7 @@ def moves_to_serial(moves: List[str]) -> List[str]:
 
 def compute_solution(grid: List[List[str]]) -> Dict[str, object]:
     """
-    grid: 3×3 list of color chars 'r','o','b','g','w','y'.
+    grid: 3Ã—3 list of color chars 'r','o','b','g','w','y'.
 
     Pattern is ILLEGAL if algorithm cannot solve it.
     """
@@ -378,7 +378,7 @@ def compute_solution(grid: List[List[str]]) -> Dict[str, object]:
             "serial": [],
             "orientation": None,
             "elapsed": 0.0,
-            "message": "Grid must be 3×3.",
+            "message": "Grid must be 3Ã—3.",
         }
 
     face = [[str(c).lower() for c in row] for row in grid]
@@ -786,7 +786,7 @@ HTML_PAGE = r"""<!doctype html>
   <div class="card">
     <h1>Cube U-Face Mural Solver</h1>
     <p>
-      Draw ANY 3×3 pattern for the top (U) face using cube colors. The solver
+      Draw ANY 3Ã—3 pattern for the top (U) face using cube colors. The solver
       will either find a move sequence or tell you that the pattern is not
       solvable (illegal) on a real cube from a solved state.
     </p>
@@ -794,7 +794,7 @@ HTML_PAGE = r"""<!doctype html>
     <!-- PAGE 1: draw U face (simple painter) -->
     <div id="page1" class="page">
       <div class="step-block">
-        <div class="step-title">Page 1 · Draw the U face</div>
+        <div class="step-title">Page 1 Â· Draw the U face</div>
 
         <p id="hintText">
           Click a sticker to select it, then choose a color from the palette.
@@ -806,7 +806,7 @@ HTML_PAGE = r"""<!doctype html>
         <div class="section-title">Choose color for the selected sticker</div>
         <div class="palette" id="palette"></div>
 
-        <div class="section-title">Paint the 3×3 U face</div>
+        <div class="section-title">Paint the 3Ã—3 U face</div>
         <div class="grid" id="grid"></div>
 
         <div class="row">
@@ -821,7 +821,7 @@ HTML_PAGE = r"""<!doctype html>
     <!-- PAGE 2: start solver + progress -->
     <div id="page2" class="page hidden">
       <div class="step-block">
-        <div class="step-title">Page 2 · Run the solver search</div>
+        <div class="step-title">Page 2 Â· Run the solver search</div>
         <p>
           When you start, the solver will search for a sequence of moves that
           draws your U-face mural using R/L/F/B/D turns. If the pattern cannot
@@ -847,7 +847,7 @@ HTML_PAGE = r"""<!doctype html>
     <!-- PAGE 3: orientation + original pattern, then continue -->
     <div id="page3" class="page hidden">
       <div class="step-block">
-        <div class="step-title">Page 3 · Place the cube</div>
+        <div class="step-title">Page 3 Â· Place the cube</div>
         <p>
           Place the cube in the fixture so each face center matches the colors
           below. The Up (U) face is the mural face you drew.
@@ -864,7 +864,7 @@ HTML_PAGE = r"""<!doctype html>
         <div class="mini-grid" id="patternPreview"></div>
 
         <div class="hint-small">
-          This 3×3 pattern is the U (top) face the solver will draw on your cube.
+          This 3Ã—3 pattern is the U (top) face the solver will draw on your cube.
         </div>
 
         <div class="row" style="margin-top:12px;">
@@ -877,7 +877,7 @@ HTML_PAGE = r"""<!doctype html>
     <!-- PAGE 4: run solver motors + finish -->
     <div id="page4" class="page hidden">
       <div class="step-block">
-        <div class="step-title">Page 4 · Run the physical solver and finish</div>
+        <div class="step-title">Page 4 Â· Run the physical solver and finish</div>
         <p>
           The solver is ready to send moves to the cube. Make sure the cube is
           placed according to the previous page, then send the commands.
@@ -1123,7 +1123,7 @@ HTML_PAGE = r"""<!doctype html>
       solveFill.style.width = "100%";
       if (typeof data.elapsed === "number") {
         solveLabel.textContent =
-          `Solver finished in ${data.elapsed.toFixed(2)} s (search depth ≤ ${data.depth_limit || 10}).`;
+          `Solver finished in ${data.elapsed.toFixed(2)} s (search depth â‰¤ ${data.depth_limit || 10}).`;
       } else {
         solveLabel.textContent = "Solver run complete.";
       }
