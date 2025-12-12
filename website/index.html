@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rubik’s Cube Mural Maker</title>
+
+  <style>
+    :root{
+      --ink:#111;
+      --muted:#555;
+      --line:#ddd;
+      --bg:#fff;
+
+      --blue:#2b6fff;
+      --red:#ff3b30;
+      --green:#22c55e;
+      --yellow:#fbbf24;
+      --orange:#fb923c;
+
+      --max:1100px;
+    }
+
+    *{box-sizing:border-box}
+
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background:var(--bg);
+      color:var(--ink);
+      line-height:1.4;
+    }
+
+    a{color:inherit;text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    header{
+      border-bottom:1px solid var(--line);
+    }
+
+    .header-inner{
+      max-width:var(--max);
+      margin:auto;
+      padding:14px 20px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+
+    nav a{
+      margin-left:14px;
+      font-size:14px;
+      color:var(--muted);
+    }
+
+    main{
+      max-width:var(--max);
+      margin:auto;
+      padding:20px;
+    }
+
+    section{
+      padding:28px 0;
+      border-bottom:1px solid var(--line);
+    }
+
+    h1{font-size:36px;margin:0 0 10px}
+    h2{font-size:22px;margin:0 0 10px}
+    h3{font-size:16px;margin:0 0 6px}
+
+    .placeholder{
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .hero{
+      display:grid;
+      grid-template-columns:1.2fr .8fr;
+      gap:20px;
+    }
+
+    .media{
+      border:1px dashed var(--line);
+      padding:16px;
+    }
+
+    .card-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:16px;
+      margin-top:12px;
+    }
+
+    .card{
+      border:1px solid var(--line);
+      padding:16px;
+    }
+
+    .net{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:12px;
+      margin-top:12px;
+    }
+
+    .face{
+      border:1px solid var(--line);
+      padding:14px;
+      min-height:120px;
+      position:relative;
+      transition:background .15s;
+    }
+
+    .face:hover{
+      background:#fafafa;
+    }
+
+    .accent{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      height:6px;
+    }
+
+    .pos-software{grid-column:2;grid-row:1}
+    .pos-electrical{grid-column:1;grid-row:2}
+    .pos-system{grid-column:2;grid-row:2}
+    .pos-mechanical{grid-column:3;grid-row:2}
+    .pos-flow{grid-column:2;grid-row:3}
+    .pos-budget{grid-column:2;grid-row:4}
+
+    .acc-blue{background:var(--blue)}
+    .acc-red{background:var(--red)}
+    .acc-green{background:var(--green)}
+    .acc-yellow{background:var(--yellow)}
+    .acc-orange{background:var(--orange)}
+
+    footer{
+      padding:20px 0;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    @media(max-width:900px){
+      .hero{grid-template-columns:1fr}
+      .net{grid-template-columns:1fr}
+      .card-grid{grid-template-columns:1fr}
+      .pos-software,
+      .pos-electrical,
+      .pos-system,
+      .pos-mechanical,
+      .pos-flow,
+      .pos-budget{
+        grid-column:auto;
+        grid-row:auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div class="header-inner">
+    <div>Rubik’s Cube Mural Maker</div>
+    <nav>
+      <a href="#overview">Overview</a>
+      <a href="#objectives">Objectives</a>
+      <a href="#net">Cube Net</a>
+      <a href="#process">Process</a>
+      <a href="#build">Build</a>
+      <a href="#software">Software</a>
+      <a href="#budget">Budget</a>
+      <a href="#team">Team</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<section id="overview">
+  <div class="hero">
+    <div>
+      <h1>Rubik’s Cube Mural Maker</h1>
+      <p class="placeholder">Placeholder</p>
+      <p class="placeholder">Placeholder</p>
+    </div>
+    <div class="media placeholder">Placeholder</div>
+  </div>
+</section>
+
+<section id="objectives">
+  <h2>Objectives & Constraints</h2>
+  <div class="card-grid">
+    <div class="card">
+      <h3>Objectives</h3>
+      <p class="placeholder">Placeholder</p>
+    </div>
+    <div class="card">
+      <h3>Constraints</h3>
+      <p class="placeholder">Placeholder</p>
+    </div>
+  </div>
+</section>
+
+<section id="net">
+  <h2>Cube Net (Subsystem Map)</h2>
+  <p class="placeholder">Placeholder</p>
+
+  <div class="net">
+
+    <a href="#software" class="face pos-software">
+      <h3>Software</h3>
+      <p class="placeholder">Placeholder</p>
+      <div class="accent acc-blue"></div>
+    </a>
+
+    <a href="#electrical" class="face pos-electrical">
+      <h3>Electrical</h3>
+      <p class="placeholder">Placeholder</p>
+      <div class="accent acc-red"></div>
+    </a>
+
+    <a href="#system" class="face pos-system">
+      <h3>System</h3>
+      <p class="placeholder">Placeholder</p>
+    </a>
+
+    <a href="#mechanical" class="face pos-mechanical">
+      <h3>Mechanical</h3>
+      <p class="placeholder">Placeholder</p>
+      <div class="accent acc-green"></div>
+    </a>
+
+    <a href="#flow" class="face pos-flow">
+      <h3>Data & Energy</h3>
+      <p class="placeholder">Placeholder</p>
+      <div class="accent acc-yellow"></div>
+    </a>
+
+    <a href="#budget" class="face pos-budget">
+      <h3>Budget</h3>
+      <p class="placeholder">Placeholder</p>
+      <div class="accent acc-orange"></div>
+    </a>
+
+  </div>
+</section>
+
+<section id="system">
+  <h2>System Overview</h2>
+  <div class="media placeholder">Placeholder</div>
+</section>
+
+<section id="process">
+  <h2>Design Process</h2>
+  <p class="placeholder">Placeholder</p>
+</section>
+
+<section id="build">
+  <h2>Build Details</h2>
+
+  <h3 id="mechanical">Mechanical</h3>
+  <div class="media placeholder">Placeholder</div>
+
+  <h3 id="electrical">Electrical</h3>
+  <div class="media placeholder">Placeholder</div>
+</section>
+
+<section id="flow">
+  <h2>Data & Energy Flow</h2>
+  <div class="media placeholder">Placeholder</div>
+</section>
+
+<section id="software">
+  <h2>Software</h2>
+  <p class="placeholder">Placeholder</p>
+</section>
+
+<section id="budget">
+  <h2>Budget</h2>
+  <p class="placeholder">Placeholder</p>
+</section>
+
+<section id="team">
+  <h2>Team</h2>
+  <p class="placeholder">Placeholder</p>
+</section>
+
+<footer>
+  PIE Project · Rubik’s Cube Mural Maker
+</footer>
+
+</main>
+
+</body>
+</html>
