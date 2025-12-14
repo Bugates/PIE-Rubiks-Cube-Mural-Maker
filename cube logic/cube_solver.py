@@ -20,7 +20,6 @@ except ImportError:
     HAS_SERIAL = False
 
 
-
 def get_local_ip() -> str:
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -46,7 +45,6 @@ def print_qr(url: str) -> None:
         print("(Install 'qrcode' Python package to see ASCII QR code.)")
 
 
-# Face indices: U, R, F, D, L, B
 U, R, F, D, L, B = range(6)
 
 
@@ -65,10 +63,6 @@ index_to_sticker: Dict[int, Sticker] = {}
 
 
 def add_face(face: int, coord_func, normal: Tuple[int, int, int]) -> None:
-    """
-    Register mapping from (row, col) on given face to (x,y,z,normal)
-    and assign each facelet index face*9 + pos.
-    """
     for pos in range(9):
         r, c = divmod(pos, 3)
         x, y, z = coord_func(r, c)
@@ -81,28 +75,30 @@ def add_face(face: int, coord_func, normal: Tuple[int, int, int]) -> None:
         index_to_sticker[idx] = st
 
 
-# Coordinate mapping (x right, y up, z front)
-
 def coord_U(r, c):
-    return -1 + c, 1, -1 + r   # y=+1 plane
+    return -1 + c, 1, -1 + r
+
 
 def coord_D(r, c):
-    return -1 + c, -1, 1 - r   # y=-1 plane
+    return -1 + c, -1, 1 - r
+
 
 def coord_F(r, c):
-    return -1 + c, 1 - r, 1    # z=+1 plane
+    return -1 + c, 1 - r, 1
+
 
 def coord_B(r, c):
-    return 1 - c, 1 - r, -1    # z=-1 plane
+    return 1 - c, 1 - r, -1
+
 
 def coord_R(r, c):
-    return 1, 1 - r, 1 - c     # x=+1 plane
+    return 1, 1 - r, 1 - c
+
 
 def coord_L(r, c):
-    return -1, 1 - r, -1 + c   # x=-1 plane
+    return -1, 1 - r, -1 + c
 
 
-# Register faces with normals
 add_face(U, coord_U, (0, 1, 0))
 add_face(D, coord_D, (0, -1, 0))
 add_face(F, coord_F, (0, 0, 1))
@@ -111,32 +107,31 @@ add_face(R, coord_R, (1, 0, 0))
 add_face(L, coord_L, (-1, 0, 0))
 
 
-# Rotations of coordinates and normals
-
-def rot_z_cw(x, y, z):   # clockwise looking from +z
+def rot_z_cw(x, y, z):
     return y, -x, z
+
 
 def rot_z_ccw(x, y, z):
     return -y, x, z
 
-def rot_x_cw(x, y, z):   # clockwise from +x
+
+def rot_x_cw(x, y, z):
     return x, z, -y
+
 
 def rot_x_ccw(x, y, z):
     return x, -z, y
 
-def rot_y_cw(x, y, z):   # clockwise from +y
+
+def rot_y_cw(x, y, z):
     return z, y, -x
+
 
 def rot_y_ccw(x, y, z):
     return -z, y, x
 
 
 def make_perm(layer_cond, rot_func) -> List[int]:
-    """
-    Build permutation p such that new_state[i] = old_state[p[i]]
-    for a clockwise quarter turn of a face whose stickers satisfy layer_cond.
-    """
     perm = list(range(54))
     for idx, st in index_to_sticker.items():
         if layer_cond(st):
@@ -155,7 +150,6 @@ def invert_perm(p: List[int]) -> List[int]:
     return q
 
 
-# Permutations for robot-turnable faces
 perm_F_cw = make_perm(lambda st: st.z == 1, rot_z_cw)
 perm_B_cw = make_perm(lambda st: st.z == -1, rot_z_ccw)
 perm_R_cw = make_perm(lambda st: st.x == 1, rot_x_cw)
@@ -170,15 +164,15 @@ perm_D_ccw = invert_perm(perm_D_cw)
 
 
 MOVE_PERMS: Dict[str, List[int]] = {
-    'F':  perm_F_cw,
+    'F': perm_F_cw,
     "F'": perm_F_ccw,
-    'B':  perm_B_cw,
+    'B': perm_B_cw,
     "B'": perm_B_ccw,
-    'R':  perm_R_cw,
+    'R': perm_R_cw,
     "R'": perm_R_ccw,
-    'L':  perm_L_cw,
+    'L': perm_L_cw,
     "L'": perm_L_ccw,
-    'D':  perm_D_cw,
+    'D': perm_D_cw,
     "D'": perm_D_ccw,
 }
 
@@ -190,21 +184,12 @@ INV_MOVE: Dict[str, str] = {
     'D': "D'", "D'": 'D',
 }
 
-# Indices of U (top) face in the 54-length state string
 U_FACE_IDX = [U * 9 + i for i in range(9)]
 
 
 def apply_perm(state: str, perm: List[int]) -> str:
     return ''.join(state[perm[i]] for i in range(54))
 
-
-# Base color scheme (standard):
-#   U = w (white)
-#   D = y (yellow)
-#   F = g (green)
-#   B = b (blue)
-#   R = r (red)
-#   L = o (orange)
 
 ORIENTATIONS: List[Dict[str, str]] = [
     {'B': 'b', 'D': 'y', 'F': 'g', 'L': 'o', 'R': 'r', 'U': 'w'},
@@ -235,10 +220,6 @@ ORIENTATIONS: List[Dict[str, str]] = [
 
 
 def build_state_for_orientation(ori: Dict[str, str]) -> str:
-    """
-    Build a "solved" cube state for a given orientation mapping,
-    by making each face all its center color.
-    """
     colors_by_face = {
         U: ori['U'],
         R: ori['R'],
@@ -254,28 +235,21 @@ def build_state_for_orientation(ori: Dict[str, str]) -> str:
 
 
 def up_matches(state: str, target_face: List[List[str]]) -> bool:
-    """Check if the U (top) face matches the 3×3 target pattern."""
     for pos in range(9):
         if state[U_FACE_IDX[pos]] != target_face[pos // 3][pos % 3]:
             return False
     return True
 
 
-
 ALLOWED_MOVES = ['F', "F'", 'B', "B'", 'R', "R'", 'L', "L'", 'D', "D'"]
-
 MAX_DEPTH_DEFAULT = 40
 
 
-def solve_u_mural(target_face: List[List[str]],
-                  max_depth: int = MAX_DEPTH_DEFAULT
-                  ) -> Tuple[Optional[List[str]], Optional[Dict[str, str]], int]:
-    """
-    Solve for a pattern on the U (top) face using RLFB+D moves.
+def solve_u_mural(
+    target_face: List[List[str]],
+    max_depth: int = MAX_DEPTH_DEFAULT
+) -> Tuple[Optional[List[str]], Optional[Dict[str, str]], int]:
 
-    Pattern is considered ILLEGAL if no solution is found within max_depth
-    for any valid cube orientation whose U color matches the pattern center.
-    """
     center_color = target_face[1][1]
     best_moves: Optional[List[str]] = None
     best_ori: Optional[Dict[str, str]] = None
@@ -335,42 +309,40 @@ def solve_u_mural(target_face: List[List[str]],
     return best_moves, best_ori, max_depth
 
 
+def moves_to_serial(moves: List[str]) -> List[int]:
+    cmd_map = {
+        "RF": 121,
+        "RB": 122,
+        "LF": 141,
+        "LB": 142,
+        "BF": 131,
+        "BB": 132,
+        "FF": 111,
+        "FB": 112,
+        "DF": 211,
+        "DB": 212,
+    }
 
-def moves_to_serial(moves: List[str]) -> List[str]:
-    """
-    Convert moves to robot commands, but INVERT direction
-    for R/L/F/B moves (because motors rotate opposite),
-    while D stays normal.
-    """
-    cmds = []
+    cmds: List[int] = []
     for m in moves:
         face = m[0]
-        clockwise = (len(m) == 1)   # True for R, False for R'
-
-        # Correct Arduino board
-        board = 2 if face == 'D' else 1
+        clockwise = (len(m) == 1)
 
         if face == 'D':
-            # D-commands remain EXACTLY as before
-            direction = 'B' if clockwise else 'F'
+            direction = 'F' if clockwise else 'B'
         else:
-            # R/L/F/B should be REVERSED
-            # Normal: clockwise → F, ccw → B
-            # Now:    clockwise → B, ccw → F
             direction = 'B' if clockwise else 'F'
 
-        cmds.append(f"{board}, {face}{direction}")
+        key = f"{face}{direction}"
+        if key not in cmd_map:
+            raise ValueError(f"Unknown robot command mapping for move '{m}' -> '{key}'")
 
-    cmds.append("END")
+        cmds.append(cmd_map[key])
+
     return cmds
 
 
 def compute_solution(grid: List[List[str]]) -> Dict[str, object]:
-    """
-    grid: 3×3 list of color chars 'r','o','b','g','w','y'.
-
-    Pattern is ILLEGAL if algorithm cannot solve it.
-    """
     if len(grid) != 3 or any(len(row) != 3 for row in grid):
         return {
             "moves": [],
@@ -407,7 +379,6 @@ def compute_solution(grid: List[List[str]]) -> Dict[str, object]:
     elapsed = time.time() - t0
 
     if moves is None or ori_used is None:
-        # ILLEGAL pattern = algorithm cannot solve it
         return {
             "moves": [],
             "serial": [],
@@ -432,7 +403,6 @@ def compute_solution(grid: List[List[str]]) -> Dict[str, object]:
     }
 
 
-
 def find_ports() -> List[str]:
     return glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
 
@@ -452,9 +422,14 @@ def read_all_available(s) -> List[str]:
     return msgs
 
 
-def wait_for_done(serials, log: List[str]) -> None:
-    log.append("Waiting for DONE from any Arduino...")
-    print("  Waiting for DONE...")
+def wait_for_done(serials, log: List[str], required_dones: int = 3) -> None:
+    required = min(required_dones, len(serials))
+    if required <= 0:
+        return
+
+    done_ports = set()
+    log.append(f"Waiting for DONE from {required} Arduino(s)...")
+    print(f"  Waiting for {required} DONE(s)...")
 
     while True:
         for s in serials:
@@ -464,11 +439,25 @@ def wait_for_done(serials, log: List[str]) -> None:
                 log.append(line)
                 print("   ", line)
                 if m.strip() == "DONE":
-                    return
+                    done_ports.add(s.port)
+                    if len(done_ports) >= required:
+                        return
         time.sleep(0.02)
 
 
-def run_serial_commands(commands: List[str]) -> Dict[str, object]:
+def _coerce_cmd_to_int(cmd) -> Optional[int]:
+    if isinstance(cmd, int):
+        return cmd
+    if isinstance(cmd, float) and cmd.is_integer():
+        return int(cmd)
+    if isinstance(cmd, str):
+        s = cmd.strip()
+        if s.isdigit():
+            return int(s)
+    return None
+
+
+def run_serial_commands(commands: List[object]) -> Dict[str, object]:
     log: List[str] = []
 
     if not HAS_SERIAL:
@@ -504,20 +493,21 @@ def run_serial_commands(commands: List[str]) -> Dict[str, object]:
         return {"ok": False, "log": log, "error": err}
 
     try:
-        for cmd in commands:
-            cmd = cmd.strip()
-            if not cmd:
+        for cmd_raw in commands:
+            cmd = _coerce_cmd_to_int(cmd_raw)
+            if cmd is None:
+                log.append(f"Skipping non-numeric command: {cmd_raw!r}")
                 continue
-            line = cmd + "\n"
+            if not (0 <= cmd <= 255):
+                raise ValueError(f"Command {cmd} out of byte range")
+
+            data = bytes([cmd])
 
             for s in serials:
-                s.write(line.encode())
+                s.write(data)
 
-            log.append(f"Sent: {cmd}")
-            print("\nSent:", cmd)
-
-            if cmd == "END":
-                break
+            log.append(f"Sent byte: {cmd}")
+            print("\nSent byte:", cmd)
 
             time.sleep(0.05)
             for s in serials:
@@ -527,7 +517,7 @@ def run_serial_commands(commands: List[str]) -> Dict[str, object]:
                     log.append(line)
                     print("   ", line)
 
-            wait_for_done(serials, log)
+            wait_for_done(serials, log, required_dones=3)
             time.sleep(0.05)
 
         log.append("All commands completed.")
@@ -556,7 +546,100 @@ def run_serial_commands(commands: List[str]) -> Dict[str, object]:
             except Exception:
                 pass
         log.append("Serial connections closed.")
-        print("Serial connectionsclosed.")
+        print("Serial connections closed.")
+        print("Finished.")
+
+
+def run_manual_motor_command(cmd_raw: object) -> Dict[str, object]:
+    log: List[str] = []
+
+    if not HAS_SERIAL:
+        err = "pyserial is not installed on this system."
+        log.append(err)
+        return {"ok": False, "log": log, "error": err}
+
+    cmd = _coerce_cmd_to_int(cmd_raw)
+    if cmd is None:
+        err = f"Manual command must be an integer. Got: {cmd_raw!r}"
+        log.append(err)
+        return {"ok": False, "log": log, "error": err}
+
+    ports = find_ports()
+    if not ports:
+        err = "No Arduino ports found."
+        log.append(err)
+        return {"ok": False, "log": log, "error": err}
+
+    log.append("Found ports: " + ", ".join(ports))
+    print("Found ports:", ports)
+
+    serials = []
+    for port in ports:
+        try:
+            s = serial.Serial(port, 9600, timeout=1)
+            time.sleep(2)
+            serials.append(s)
+            log.append(f"Opened {port}")
+            print(f"Opened {port}")
+        except Exception as e:
+            msg = f"Could not open {port}: {e}"
+            log.append(msg)
+            print(msg)
+
+    if not serials:
+        err = "No serial connections opened."
+        log.append(err)
+        return {"ok": False, "log": log, "error": err}
+
+    try:
+        for s in serials:
+            try:
+                msgs = read_all_available(s)
+                for m in msgs:
+                    line = f"{s.port}: {m}"
+                    log.append(line)
+                    print("   ", line)
+            except Exception:
+                pass
+
+        if 0 <= cmd <= 255:
+            payload_desc = f"byte:{cmd}"
+            data = bytes([cmd])
+        else:
+            payload_desc = f"ascii:{cmd}"
+            data = (str(cmd) + "\n").encode("utf-8")
+
+        for s in serials:
+            s.write(data)
+
+        log.append(f"Sent manual command ({payload_desc})")
+        print("\nSent manual command:", cmd, f"({payload_desc})")
+
+        t0 = time.time()
+        while time.time() - t0 < 0.8:
+            for s in serials:
+                msgs = read_all_available(s)
+                for m in msgs:
+                    line = f"{s.port}: {m}"
+                    log.append(line)
+                    print("   ", line)
+            time.sleep(0.05)
+
+        return {"ok": True, "log": log, "error": ""}
+
+    except Exception as e:
+        err = f"Error while sending manual command: {e}"
+        log.append(err)
+        print(err)
+        return {"ok": False, "log": log, "error": err}
+    finally:
+        for s in serials:
+            try:
+                s.close()
+            except Exception:
+                pass
+        log.append("Serial connections closed.")
+        print("Serial connections closed.")
         print("Finished.")
 
 
@@ -699,6 +782,11 @@ HTML_PAGE = r"""<!doctype html>
       background: #ffffff;
       color: var(--text);
     }
+    button.danger {
+      border-color: #ef4444;
+      background: #ef4444;
+      color: #ffffff;
+    }
     button:disabled {
       opacity: 0.5;
       cursor: default;
@@ -778,17 +866,179 @@ HTML_PAGE = r"""<!doctype html>
     .page {
       margin-top: 8px;
     }
+
+    .settings-fab {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 1500;
+      border-radius: 999px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text);
+      box-shadow: 0 10px 25px rgba(15,23,42,0.10);
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .settings-fab:hover {
+      box-shadow: 0 12px 28px rgba(15,23,42,0.14);
+    }
+
+    /* FIX: make overlay reliably clickable and above page content */
+    .settings-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      z-index: 2400;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 56px 16px 16px;
+      pointer-events: auto;
+    }
+    .settings-overlay.hidden { display: none; }
+
+    .settings-panel {
+      width: 100%;
+      max-width: 780px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 20px 40px rgba(15,23,42,0.22);
+      padding: 14px;
+      pointer-events: auto;
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .settings-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0;
+    }
+    .settings-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 2px 0 0;
+    }
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    @media (min-width: 620px){
+      .settings-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    .settings-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fafafa;
+    }
+    .settings-card h3 {
+      margin: 0 0 6px;
+      font-size: 13px;
+    }
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn-row button {
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 13px;
+    }
+    .btn-row button.secondary {
+      background: #ffffff;
+    }
+    .log-wrap {
+      margin-top: 10px;
+    }
+    .tiny-note {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
   </style>
 </head>
 <body>
+
+<button id="settingsFab" class="settings-fab" type="button">⚙ Settings</button>
+
+<div id="settingsOverlay" class="settings-overlay hidden" aria-hidden="true">
+  <div id="settingsPanel" class="settings-panel" role="dialog" aria-modal="true">
+    <div class="settings-header">
+      <div>
+        <div class="settings-title">Settings · Manual Motor Control</div>
+        <div class="settings-sub">These buttons send integer denotation codes to the Arduinos.</div>
+      </div>
+      <button id="closeSettingsBtn" type="button" class="secondary">Close</button>
+    </div>
+
+    <div class="settings-grid">
+      <div class="settings-card">
+        <h3>RL pulley motor</h3>
+        <div class="btn-row">
+          <button type="button" class="secondary" data-manualcmd="252">IN (252)</button>
+          <button type="button" class="secondary" data-manualcmd="251">OUT (251)</button>
+        </div>
+        <div class="tiny-note">Sends 252 for IN, 251 for OUT.</div>
+      </div>
+
+      <div class="settings-card">
+        <h3>FB pulley motor</h3>
+        <div class="btn-row">
+          <button type="button" class="secondary" data-manualcmd="261">IN (261)</button>
+          <button type="button" class="secondary" data-manualcmd="262">OUT (262)</button>
+        </div>
+        <div class="tiny-note">Sends 261 for IN, 262 for OUT.</div>
+      </div>
+
+      <div class="settings-card">
+        <h3>Bottom motor motor</h3>
+        <div class="btn-row">
+          <button type="button" class="secondary" data-manualcmd="271">RUN (271)</button>
+        </div>
+        <div class="tiny-note">Sends 271.</div>
+      </div>
+
+      <div class="settings-card">
+        <h3>DC rack-and-pinion</h3>
+        <div class="btn-row">
+          <button type="button" class="secondary" data-manualcmd="300">RUN (300)</button>
+        </div>
+        <div class="tiny-note">Sends 300.</div>
+      </div>
+    </div>
+
+    <div class="log-wrap">
+      <div class="section-title">Manual command log</div>
+      <pre id="settingsLogPre"></pre>
+      <div class="tiny-note">This shows the same Arduino log lines you already print on the server.</div>
+    </div>
+  </div>
+</div>
+
 <div class="shell">
   <div class="card">
+
     <h1>Cube U-Face Mural Solver</h1>
     <p>
-      Draw ANY 3×3 pattern for the top (U) face using cube colors. 
+      Draw ANY 3×3 pattern for the top (U) face using cube colors.
     </p>
 
-    <!-- PAGE 1: draw U face (simple painter) -->
     <div id="page1" class="page">
       <div class="step-block">
         <div class="step-title">Page 1 · Draw the U face</div>
@@ -812,13 +1062,12 @@ HTML_PAGE = r"""<!doctype html>
       </div>
     </div>
 
-    <!-- PAGE 2: start solver + progress -->
     <div id="page2" class="page hidden">
       <div class="step-block">
         <div class="step-title">Page 2 · Run the solver search</div>
         <p>
           When you start, the solver will search for a sequence of moves that
-          draws your U-face mural using R/L/F/B/D turns. 
+          draws your U-face mural using R/L/F/B/D turns.
         </p>
 
         <button id="startSolveBtn">Start solver</button>
@@ -836,7 +1085,6 @@ HTML_PAGE = r"""<!doctype html>
       </div>
     </div>
 
-    <!-- PAGE 3: orientation + original pattern, then continue -->
     <div id="page3" class="page hidden">
       <div class="step-block">
         <div class="step-title">Page 3 · Place the cube</div>
@@ -866,7 +1114,6 @@ HTML_PAGE = r"""<!doctype html>
       </div>
     </div>
 
-    <!-- PAGE 4: run solver motors + finish -->
     <div id="page4" class="page hidden">
       <div class="step-block">
         <div class="step-title">Page 4 · Run the physical solver and finish</div>
@@ -947,7 +1194,6 @@ HTML_PAGE = r"""<!doctype html>
 
   const paletteEl = document.getElementById("palette");
   const gridEl = document.getElementById("grid");
-  const legalStatus = document.getElementById("legalStatus");
 
   const solveProgress  = document.getElementById("solveProgress");
   const solveFill      = document.getElementById("solveFill");
@@ -964,6 +1210,12 @@ HTML_PAGE = r"""<!doctype html>
   const runFill        = document.getElementById("runFill");
   const runLabel       = document.getElementById("runLabel");
   const solverLogPre   = document.getElementById("solverLogPre");
+
+  const settingsFab = document.getElementById("settingsFab");
+  const settingsOverlay = document.getElementById("settingsOverlay");
+  const settingsPanel = document.getElementById("settingsPanel");
+  const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+  const settingsLogPre = document.getElementById("settingsLogPre");
 
   const cells = [];
   const swatches = {};
@@ -987,9 +1239,7 @@ HTML_PAGE = r"""<!doctype html>
   }
 
   function selectCell(cell) {
-    if (selectedCell) {
-      selectedCell.classList.remove("selected");
-    }
+    if (selectedCell) selectedCell.classList.remove("selected");
     selectedCell = cell;
     selectedCell.classList.add("selected");
   }
@@ -1031,6 +1281,83 @@ HTML_PAGE = r"""<!doctype html>
     }
   }
 
+  function appendLogLines(lines) {
+    if (!Array.isArray(lines) || lines.length === 0) return;
+
+    const text = lines.join("\n") + "\n";
+
+    if (settingsLogPre) {
+      settingsLogPre.textContent = (settingsLogPre.textContent || "") + text;
+      settingsLogPre.scrollTop = settingsLogPre.scrollHeight;
+    }
+    if (solverLogPre && !solverLogPre.classList.contains("hidden")) {
+      solverLogPre.textContent = (solverLogPre.textContent || "") + text;
+      solverLogPre.scrollTop = solverLogPre.scrollHeight;
+    }
+  }
+
+  function openSettings() {
+    settingsOverlay.classList.remove("hidden");
+    settingsOverlay.setAttribute("aria-hidden", "false");
+  }
+
+  function closeSettings() {
+    settingsOverlay.classList.add("hidden");
+    settingsOverlay.setAttribute("aria-hidden", "true");
+  }
+
+  settingsFab.addEventListener("click", openSettings);
+  closeSettingsBtn.addEventListener("click", closeSettings);
+
+  /* FIX: overlay always closes on background click */
+  settingsOverlay.addEventListener("click", () => closeSettings());
+
+  /* FIX: panel should NOT close overlay when clicking inside it */
+  settingsPanel.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+
+  /* FIX: ESC closes settings */
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !settingsOverlay.classList.contains("hidden")) {
+      closeSettings();
+    }
+  });
+
+  document.querySelectorAll("[data-manualcmd]").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+
+      const cmdStr = btn.getAttribute("data-manualcmd");
+      const cmd = parseInt(cmdStr, 10);
+      if (!Number.isFinite(cmd)) return;
+
+      const oldText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Sending...";
+
+      try {
+        const res = await fetch("/manual_cmd", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cmd })
+        });
+        const data = await res.json();
+
+        appendLogLines([`UI: Manual command ${cmd} -> ${data.ok ? "OK" : "ERROR"}`]);
+        if (Array.isArray(data.log)) appendLogLines(data.log);
+        if (data.error) appendLogLines([`ERROR: ${data.error}`]);
+
+      } catch (err) {
+        console.error(err);
+        appendLogLines([`UI ERROR: Failed to send manual command ${cmd}`]);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
+    });
+  });
+
   paletteOrder.forEach(c => {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -1050,9 +1377,7 @@ HTML_PAGE = r"""<!doctype html>
       div.dataset.c = c;
       div.dataset.color = "w";
       div.style.background = COLORS["w"];
-      div.onclick = () => {
-        selectCell(div);
-      };
+      div.onclick = () => selectCell(div);
       gridEl.appendChild(div);
       cells[r][c] = div;
     }
@@ -1073,9 +1398,7 @@ HTML_PAGE = r"""<!doctype html>
   selectCell(cells[1][1]);
   setActiveSwatch("w");
 
-  toPage2Btn.onclick = () => {
-    showPage("page2");
-  };
+  toPage2Btn.onclick = () => showPage("page2");
 
   let solveIntervalRef = null;
 
@@ -1126,11 +1449,8 @@ HTML_PAGE = r"""<!doctype html>
         ? "Pattern is not solvable from a solved cube. It is treated as illegal."
         : "Solver finished.");
 
-      if (isIllegal) {
-        solveStatus.classList.add("error-text");
-      } else {
-        solveStatus.classList.remove("error-text");
-      }
+      if (isIllegal) solveStatus.classList.add("error-text");
+      else solveStatus.classList.remove("error-text");
 
       movesPre.textContent = data.moves && data.moves.length
         ? "Moves:\n" + data.moves.join(" ")
@@ -1142,17 +1462,11 @@ HTML_PAGE = r"""<!doctype html>
 
       currentSerial = Array.isArray(data.serial) ? data.serial : [];
 
-      if (data.orientation) {
-        renderOrientation(data.orientation);
-      } else {
-        orientationBox.innerHTML = "<em>Pattern is not solvable / illegal, so no orientation is available.</em>";
-      }
+      if (data.orientation) renderOrientation(data.orientation);
+      else orientationBox.innerHTML = "<em>Pattern is not solvable / illegal, so no orientation is available.</em>";
 
-      if (!isIllegal && data.moves && data.moves.length >= 0) {
-        toPage3Btn.disabled = false;
-      } else {
-        toPage3Btn.disabled = true;
-      }
+      if (!isIllegal && data.moves && data.moves.length >= 0) toPage3Btn.disabled = false;
+      else toPage3Btn.disabled = true;
 
     } catch (err) {
       console.error(err);
@@ -1166,9 +1480,7 @@ HTML_PAGE = r"""<!doctype html>
     }
   };
 
-  toPage3Btn.onclick = () => {
-    showPage("page3");
-  };
+  toPage3Btn.onclick = () => showPage("page3");
 
   function renderOrientation(o) {
     const faces = ["U","L","F","R","B","D"];
@@ -1236,11 +1548,8 @@ HTML_PAGE = r"""<!doctype html>
       if (runInterval) clearInterval(runInterval);
       runFill.style.width = "100%";
 
-      if (data.ok) {
-        runLabel.textContent = "Solver run complete. The cube mural should now be drawn.";
-      } else {
-        runLabel.textContent = "Solver run finished with an error.";
-      }
+      if (data.ok) runLabel.textContent = "Solver run complete. The cube mural should now be drawn.";
+      else runLabel.textContent = "Solver run finished with an error.";
 
       if (Array.isArray(data.log)) {
         solverLogPre.textContent = data.log.join("\n");
@@ -1366,6 +1675,7 @@ class CubeHandler(BaseHTTPRequestHandler):
                 serial_list = data.get("serial") or []
                 print("\n=== New /run_robot request ===")
                 print("Commands:", serial_list)
+
                 result = run_serial_commands(serial_list)
 
                 self._set_headers(200, "application/json; charset=utf-8")
@@ -1376,10 +1686,27 @@ class CubeHandler(BaseHTTPRequestHandler):
                 self._set_headers(500, "application/json; charset=utf-8")
                 self.wfile.write(json.dumps({"ok": False, "log": [], "error": str(e)}).encode("utf-8"))
 
+        elif self.path == "/manual_cmd":
+            try:
+                data = json.loads(body.decode("utf-8"))
+                cmd = data.get("cmd")
+
+                print("\n=== New /manual_cmd request ===")
+                print("Manual cmd:", cmd)
+
+                result = run_manual_motor_command(cmd)
+
+                self._set_headers(200, "application/json; charset=utf-8")
+                self.wfile.write(json.dumps(result).encode("utf-8"))
+
+            except Exception as e:
+                print("Error in /manual_cmd:", e)
+                self._set_headers(500, "application/json; charset=utf-8")
+                self.wfile.write(json.dumps({"ok": False, "log": [], "error": str(e)}).encode("utf-8"))
+
         else:
             self._set_headers(404, "text/plain; charset=utf-8")
             self.wfile.write(b"Not found")
-
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:
