@@ -2,36 +2,77 @@ import time
 import glob
 import serial
 
+BAUD = 9600
+
 def find_ports():
     return glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
 
 ports = find_ports()
-print("Ports:", ports)
+print("Found ports:", ports)
 
 serials = []
-for p in ports:
-    s = serial.Serial(p, 9600, timeout=1)
-    time.sleep(2)  # REQUIRED
-    serials.append(s)
-    print("Opened", p)
 
-commands = [222, 121, 221]
+for p in ports:
+    try:
+        s = serial.Serial(
+            port=p,
+            baudrate=BAUD,
+            timeout=1,
+            write_timeout=1
+        )
+        time.sleep(3)                 # allow Arduino reset
+        s.reset_input_buffer()
+        s.reset_output_buffer()
+        serials.append(s)
+        print("Opened", p)
+    except serial.SerialException as e:
+        print("Failed to open", p, e)
+
+commands = [222, 121, 221]   # RAW BYTES (0–255 only)
 
 for cmd in commands:
-    print("Sending", cmd)
-    data = bytes([cmd])
-    for s in serials:
-        s.write(data)
+    data = bytes([cmd])     # IMPORTANT: raw byte
+    print("Sending byte:", cmd)
 
-    time.sleep(0.1)
+    for s in serials[:]:
+        try:
+            if not s.is_open:
+                raise serial.SerialException("Port closed")
 
-    for s in serials:
-        while s.in_waiting:
-            print(s.port, s.readline().decode(errors="ignore").strip())
+            s.write(data)
+            s.flush()
 
-    time.sleep(0.5)
+        except (serial.SerialException, OSError):
+            print("Port died, removing:", s.port)
+            try:
+                s.close()
+            except:
+                pass
+            serials.remove(s)
+
+    time.sleep(0.2)
+
+    for s in serials[:]:
+        try:
+            while s.in_waiting:
+                print(
+                    s.port,
+                    s.read(1)   # raw byte read
+                )
+        except (serial.SerialException, OSError):
+            print("Read failed on", s.port)
+            try:
+                s.close()
+            except:
+                pass
+            serials.remove(s)
+
+    time.sleep(0.4)
 
 for s in serials:
-    s.close()
+    try:
+        s.close()
+    except:
+        pass
 
-print("Done")
+print("Done safely")
