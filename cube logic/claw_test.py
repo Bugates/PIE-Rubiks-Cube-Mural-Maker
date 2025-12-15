@@ -1,97 +1,37 @@
-import serial
-import serial.tools.list_ports
 import time
+import glob
+import serial
 
-BAUD = 115200
+def find_ports():
+    return glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
 
-ports = [p.device for p in serial.tools.list_ports.comports()]
-serial_connections = []
+ports = find_ports()
+print("Ports:", ports)
 
-for port in ports:
-    try:
-        s = serial.Serial(port, BAUD, timeout=0.1)
-        serial_connections.append(s)
-    except:
-        pass
+serials = []
+for p in ports:
+    s = serial.Serial(p, 9600, timeout=1)
+    time.sleep(2)  # REQUIRED
+    serials.append(s)
+    print("Opened", p)
 
-time.sleep(2)
+commands = [222, 121, 221]
 
-CMD_RL_IN  = b"{222}\n"
-CMD_RL_OUT = b"{221}\n"
-CMD_FB_IN  = b"{231}\n"
-CMD_FB_OUT = b"{232}\n"
+for cmd in commands:
+    print("Sending", cmd)
+    data = bytes([cmd])
+    for s in serials:
+        s.write(data)
 
-CMD_R = b"{121}\n"
-CMD_F = b"{111}\n"
-CMD_B = b"{132}\n"
+    time.sleep(0.1)
 
-def send(cmd, timeout=2.0):
-    for ser in serial_connections:
-        try:
-            ser.write(cmd)
-        except:
-            pass
+    for s in serials:
+        while s.in_waiting:
+            print(s.port, s.readline().decode(errors="ignore").strip())
 
-    start = time.time()
-    pending = set(serial_connections)
+    time.sleep(0.5)
 
-    while pending and (time.time() - start) < timeout:
-        for ser in list(pending):
-            try:
-                line = ser.readline().strip()
-                if line == b"DONE":
-                    pending.remove(ser)
-            except:
-                pending.remove(ser)
+for s in serials:
+    s.close()
 
-def rl_in():
-    send(CMD_RL_IN)
-
-def rl_out():
-    send(CMD_RL_OUT)
-
-def fb_in():
-    send(CMD_FB_IN)
-
-def fb_out():
-    send(CMD_FB_OUT)
-
-def R():
-    send(CMD_R)
-
-def F():
-    send(CMD_F)
-
-def B():
-    send(CMD_B)
-
-def execute_move(move):
-    if move in ["R", "L"]:
-        rl_in()
-        if move == "R":
-            R()
-        rl_out()
-    elif move in ["F", "B"]:
-        fb_in()
-        if move == "F":
-            F()
-        else:
-            B()
-        fb_out()
-
-def claw_test():
-    rl_in()
-    R()
-    rl_out()
-
-    fb_in()
-    F()
-    B()
-    F()
-    fb_out()
-
-    rl_in()
-    R()
-    rl_out()
-
-claw_test()
+print("Done")
