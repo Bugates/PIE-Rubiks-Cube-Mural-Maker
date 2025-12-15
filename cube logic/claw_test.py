@@ -20,30 +20,28 @@ for p in ports:
             timeout=1,
             write_timeout=1
         )
-        time.sleep(3)                 # allow Arduino reset
-        s.reset_input_buffer()
-        s.reset_output_buffer()
+        time.sleep(3)
         serials.append(s)
         print("Opened", p)
     except serial.SerialException as e:
         print("Failed to open", p, e)
 
-commands = [222, 121, 221]   # RAW BYTES (0â€“255 only)
+commands = [222, 121, 221]
 
 for cmd in commands:
-    data = bytes([cmd])     # IMPORTANT: raw byte
+    data = bytes([cmd])
     print("Sending byte:", cmd)
 
     for s in serials[:]:
         try:
             if not s.is_open:
-                raise serial.SerialException("Port closed")
+                raise serial.SerialException("Closed")
 
             s.write(data)
             s.flush()
 
         except (serial.SerialException, OSError):
-            print("Port died, removing:", s.port)
+            print("Port error, removing:", s.port)
             try:
                 s.close()
             except:
@@ -55,12 +53,9 @@ for cmd in commands:
     for s in serials[:]:
         try:
             while s.in_waiting:
-                print(
-                    s.port,
-                    s.read(1)   # raw byte read
-                )
+                print(s.port, s.read(1))
         except (serial.SerialException, OSError):
-            print("Read failed on", s.port)
+            print("Read error, removing:", s.port)
             try:
                 s.close()
             except:
