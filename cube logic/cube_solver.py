@@ -422,7 +422,7 @@ def read_all_available(s) -> List[str]:
     return msgs
 
 
-def wait_for_done(serials, log: List[str], required_dones: int = 3) -> None:
+def wait_for_done(serials, log: List[str], required_dones: int = 2) -> None:
     required = min(required_dones, len(serials))
     if required <= 0:
         return
@@ -517,7 +517,7 @@ def run_serial_commands(commands: List[object]) -> Dict[str, object]:
                     log.append(line)
                     print("   ", line)
 
-            wait_for_done(serials, log, required_dones=3)
+            wait_for_done(serials, log, required_dones=2)
             time.sleep(0.05)
 
         log.append("All commands completed.")
