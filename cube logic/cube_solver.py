@@ -242,7 +242,7 @@ def up_matches(state: str, target_face: List[List[str]]) -> bool:
 
 
 ALLOWED_MOVES = ['F', "F'", 'B', "B'", 'R', "R'", 'L', "L'", 'D', "D'"]
-MAX_DEPTH_DEFAULT = 40
+MAX_DEPTH_DEFAULT = 10
 
 
 def solve_u_mural(
