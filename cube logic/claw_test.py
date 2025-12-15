@@ -28,7 +28,7 @@ for p in ports:
     except serial.SerialException as e:
         print("Failed to open", p, e)
 
-commands = [222, 121, 221]   # RAW BYTES (0–255 only)
+commands = [222, 121, 221]   # RAW BYTES (0â€“255 only)
 
 for cmd in commands:
     data = bytes([cmd])     # IMPORTANT: raw byte
