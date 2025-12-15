@@ -1009,8 +1009,8 @@ HTML_PAGE = r"""<!doctype html>
       <div class="settings-card">
         <h3>Bottom motor motor</h3>
         <div class="btn-row">
-          <button type="button" class="secondary" data-manualcmd="231">IN (231)</button>
-          <button type="button" class="secondary" data-manualcmd="232">OUT (232)</button>
+          <button type="button" class="secondary" data-manualcmd="241">IN (241)</button>
+          <button type="button" class="secondary" data-manualcmd="242">OUT (242)</button>
         </div>
         <div class="tiny-note">Sends 241 for IN, 242 for OUT.</div>
       </div>
