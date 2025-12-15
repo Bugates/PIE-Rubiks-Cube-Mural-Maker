@@ -991,10 +991,10 @@ HTML_PAGE = r"""<!doctype html>
       <div class="settings-card">
         <h3>RL pulley motor</h3>
         <div class="btn-row">
-          <button type="button" class="secondary" data-manualcmd="252">IN (252)</button>
-          <button type="button" class="secondary" data-manualcmd="251">OUT (251)</button>
+          <button type="button" class="secondary" data-manualcmd="222">IN (222)</button>
+          <button type="button" class="secondary" data-manualcmd="221">OUT (221)</button>
         </div>
-        <div class="tiny-note">Sends 252 for IN, 251 for OUT.</div>
+        <div class="tiny-note">Sends 222 for IN, 221 for OUT.</div>
       </div>
 
       <div class="settings-card">
@@ -1009,8 +1009,8 @@ HTML_PAGE = r"""<!doctype html>
       <div class="settings-card">
         <h3>Bottom motor motor</h3>
         <div class="btn-row">
-          <button type="button" class="secondary" data-manualcmd="241">IN (241)</button>
-          <button type="button" class="secondary" data-manualcmd="242">OUT (242)</button>
+          <button type="button" class="secondary" data-manualcmd="241">IN (231)</button>
+          <button type="button" class="secondary" data-manualcmd="242">OUT (232)</button>
         </div>
         <div class="tiny-note">Sends 241 for IN, 242 for OUT.</div>
       </div>
