@@ -422,7 +422,7 @@ def read_all_available(s) -> List[str]:
     return msgs
 
 
-def wait_for_done(serials, log: List[str], required_dones: int = 2) -> None:
+def wait_for_done(serials, log: List[str], required_dones: int = 3) -> None:
     required = min(required_dones, len(serials))
     if required <= 0:
         return
@@ -517,7 +517,7 @@ def run_serial_commands(commands: List[object]) -> Dict[str, object]:
                     log.append(line)
                     print("   ", line)
 
-            wait_for_done(serials, log, required_dones=2)
+            wait_for_done(serials, log, required_dones=3)
             time.sleep(0.05)
 
         log.append("All commands completed.")
@@ -1000,18 +1000,18 @@ HTML_PAGE = r"""<!doctype html>
       <div class="settings-card">
         <h3>FB pulley motor</h3>
         <div class="btn-row">
-          <button type="button" class="secondary" data-manualcmd="261">IN (261)</button>
-          <button type="button" class="secondary" data-manualcmd="262">OUT (262)</button>
+          <button type="button" class="secondary" data-manualcmd="231">IN (231)</button>
+          <button type="button" class="secondary" data-manualcmd="232">OUT (232)</button>
         </div>
-        <div class="tiny-note">Sends 261 for IN, 262 for OUT.</div>
+        <div class="tiny-note">Sends 231 for IN, 232 for OUT.</div>
       </div>
 
       <div class="settings-card">
         <h3>Bottom motor motor</h3>
         <div class="btn-row">
-          <button type="button" class="secondary" data-manualcmd="271">RUN (271)</button>
+          <button type="button" class="secondary" data-manualcmd="241">RUN (241)</button>
         </div>
-        <div class="tiny-note">Sends 271.</div>
+        <div class="tiny-note">Sends 241.</div>
       </div>
 
       <div class="settings-card">
