@@ -242,7 +242,7 @@ def up_matches(state: str, target_face: List[List[str]]) -> bool:
 
 
 ALLOWED_MOVES = ['F', "F'", 'B', "B'", 'R', "R'", 'L', "L'", 'D', "D'"]
-MAX_DEPTH_DEFAULT = 10
+MAX_DEPTH_DEFAULT = 40
 
 
 def solve_u_mural(
@@ -349,7 +349,7 @@ def compute_solution(grid: List[List[str]]) -> Dict[str, object]:
             "serial": [],
             "orientation": None,
             "elapsed": 0.0,
-            "message": "Grid must be 3Ã—3.",
+            "message": "Grid must be 3Ãƒâ€”3.",
         }
 
     face = [[str(c).lower() for c in row] for row in grid]
@@ -975,13 +975,13 @@ HTML_PAGE = r"""<!doctype html>
 </head>
 <body>
 
-<button id="settingsFab" class="settings-fab" type="button">âš™ Settings</button>
+<button id="settingsFab" class="settings-fab" type="button">Ã¢Å¡â„¢ Settings</button>
 
 <div id="settingsOverlay" class="settings-overlay hidden" aria-hidden="true">
   <div id="settingsPanel" class="settings-panel" role="dialog" aria-modal="true">
     <div class="settings-header">
       <div>
-        <div class="settings-title">Settings Â· Manual Motor Control</div>
+        <div class="settings-title">Settings Ã‚Â· Manual Motor Control</div>
         <div class="settings-sub">These buttons send integer denotation codes to the Arduinos.</div>
       </div>
       <button id="closeSettingsBtn" type="button" class="secondary">Close</button>
@@ -1037,12 +1037,12 @@ HTML_PAGE = r"""<!doctype html>
 
     <h1>Cube U-Face Mural Solver</h1>
     <p>
-      Draw ANY 3Ã—3 pattern for the top (U) face using cube colors.
+      Draw ANY 3Ãƒâ€”3 pattern for the top (U) face using cube colors.
     </p>
 
     <div id="page1" class="page">
       <div class="step-block">
-        <div class="step-title">Page 1 Â· Draw the U face</div>
+        <div class="step-title">Page 1 Ã‚Â· Draw the U face</div>
 
         <p id="hintText">
           Click a sticker to select it, then choose a color from the palette.
@@ -1051,7 +1051,7 @@ HTML_PAGE = r"""<!doctype html>
         <div class="section-title">Choose color for the selected sticker</div>
         <div class="palette" id="palette"></div>
 
-        <div class="section-title">Paint the 3Ã—3 U face</div>
+        <div class="section-title">Paint the 3Ãƒâ€”3 U face</div>
         <div class="grid" id="grid"></div>
 
         <div class="row">
@@ -1065,7 +1065,7 @@ HTML_PAGE = r"""<!doctype html>
 
     <div id="page2" class="page hidden">
       <div class="step-block">
-        <div class="step-title">Page 2 Â· Run the solver search</div>
+        <div class="step-title">Page 2 Ã‚Â· Run the solver search</div>
         <p>
           When you start, the solver will search for a sequence of moves that
           draws your U-face mural using R/L/F/B/D turns.
@@ -1088,7 +1088,7 @@ HTML_PAGE = r"""<!doctype html>
 
     <div id="page3" class="page hidden">
       <div class="step-block">
-        <div class="step-title">Page 3 Â· Place the cube</div>
+        <div class="step-title">Page 3 Ã‚Â· Place the cube</div>
         <p>
           Place the cube in the fixture so each face center matches the colors
           below. The Up (U) face is the mural face you drew.
@@ -1105,7 +1105,7 @@ HTML_PAGE = r"""<!doctype html>
         <div class="mini-grid" id="patternPreview"></div>
 
         <div class="hint-small">
-          This 3Ã—3 pattern is the U (top) face the solver will draw on your cube.
+          This 3Ãƒâ€”3 pattern is the U (top) face the solver will draw on your cube.
         </div>
 
         <div class="row" style="margin-top:12px;">
@@ -1117,7 +1117,7 @@ HTML_PAGE = r"""<!doctype html>
 
     <div id="page4" class="page hidden">
       <div class="step-block">
-        <div class="step-title">Page 4 Â· Run the physical solver and finish</div>
+        <div class="step-title">Page 4 Ã‚Â· Run the physical solver and finish</div>
         <p>
           The solver is ready to send moves to the cube. Make sure the cube is
           placed according to the previous page, then send the commands.
@@ -1439,7 +1439,7 @@ HTML_PAGE = r"""<!doctype html>
       solveFill.style.width = "100%";
       if (typeof data.elapsed === "number") {
         solveLabel.textContent =
-          `Solver finished in ${data.elapsed.toFixed(2)} s (search depth â‰¤ ${data.depth_limit || 10}).`;
+          `Solver finished in ${data.elapsed.toFixed(2)} s (search depth Ã¢â€°Â¤ ${data.depth_limit || 10}).`;
       } else {
         solveLabel.textContent = "Solver run complete.";
       }
