@@ -640,7 +640,7 @@ APP_HTML = r"""<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Rubik’s Cube Mural Presets</title>
+  <title>Rubikâ€™s Cube Mural Presets</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root{
@@ -726,7 +726,7 @@ APP_HTML = r"""<!doctype html>
 
     <div class="row">
       <div class="dropdown">
-        <button class="btn secondary" id="insertBtn" type="button">Insert ▾</button>
+        <button class="btn secondary" id="insertBtn" type="button">Insert â–¾</button>
         <div class="menu" id="insertMenu">
           <button class="btn secondary" type="button" id="insertBottomBtn">Insert bottom (241)</button>
           <button class="btn secondary" type="button" id="insertSidesBtn">Insert sides (222,231,222,231)</button>
@@ -735,7 +735,7 @@ APP_HTML = r"""<!doctype html>
       </div>
 
       <div class="dropdown">
-        <button class="btn secondary" id="ejectBtn" type="button">Eject ▾</button>
+        <button class="btn secondary" id="ejectBtn" type="button">Eject â–¾</button>
         <div class="menu" id="ejectMenu">
           <button class="btn secondary" type="button" id="ejectSidesBtn">Eject sides (221,232,221,232)</button>
           <button class="btn secondary" type="button" id="ejectBottomBtn">Eject bottom (242)</button>
@@ -755,10 +755,10 @@ APP_HTML = r"""<!doctype html>
 
       <div class="card">
         <div class="h2">Mario preset</div>
-        <div class="muted">20 cubes (5×4). Order: 1,1 → 1,4 then 2,1 → 2,4 ... 5,4</div>
+        <div class="muted">20 cubes (5Ã—4). Order: 1,1 â†’ 1,4 then 2,1 â†’ 2,4 ... 5,4</div>
         <div class="preview-wrap">
           <div>
-            <div class="pill">Preview 12×15</div>
+            <div class="pill">Preview 12Ã—15</div>
             <div class="preview" id="marioPreview"></div>
           </div>
           <div style="min-width:240px;">
@@ -775,10 +775,10 @@ APP_HTML = r"""<!doctype html>
 
       <div class="card">
         <div class="h2">Duck preset</div>
-        <div class="muted">20 cubes (5×4). Order: 1,1 → 1,4 then 2,1 → 2,4 ... 5,4</div>
+        <div class="muted">20 cubes (5Ã—4). Order: 1,1 â†’ 1,4 then 2,1 â†’ 2,4 ... 5,4</div>
         <div class="preview-wrap">
           <div>
-            <div class="pill">Preview 12×15</div>
+            <div class="pill">Preview 12Ã—15</div>
             <div class="preview" id="duckPreview"></div>
           </div>
           <div style="min-width:240px;">
@@ -806,7 +806,7 @@ APP_HTML = r"""<!doctype html>
       <div class="row" style="justify-content:space-between;">
         <div>
           <div class="h2" id="placeTitle">Place cube</div>
-          <div class="muted" id="placeSub">Page 1 · Place the cube in the fixture</div>
+          <div class="muted" id="placeSub">Page 1 Â· Place the cube in the fixture</div>
         </div>
         <div class="row">
           <span class="pill" id="modePill">mode</span>
@@ -830,12 +830,12 @@ APP_HTML = r"""<!doctype html>
         <div class="muted">Page 1 actions</div>
         <div class="row">
           <button class="btn secondary" type="button" id="placeBackBtn">Back</button>
-          <button class="btn" type="button" id="runSolverBtn">Run solver →</button>
+          <button class="btn" type="button" id="runSolverBtn">Run solver â†’</button>
         </div>
       </div>
 
       <div class="mini-note">
-        “Run solver” here just means: go to the cube execution page for this cube, where you can send the preset bytes multiple times.
+        â€œRun solverâ€ here just means: go to the cube execution page for this cube, where you can send the preset bytes multiple times.
       </div>
     </div>
 
@@ -850,7 +850,7 @@ APP_HTML = r"""<!doctype html>
       <div class="row" style="justify-content:space-between;">
         <div>
           <div class="h2" id="cubeTitle">Cube</div>
-          <div class="muted" id="cubeSub">Page 2 · Send commands</div>
+          <div class="muted" id="cubeSub">Page 2 Â· Send commands</div>
         </div>
         <div class="row">
           <span class="pill" id="cubeModePill">mode</span>
@@ -1114,7 +1114,7 @@ APP_HTML = r"""<!doctype html>
     logAll("Selected preset: " + activePresetName + " (prev: " + (prevPresetName || "none") + ")");
     await loadStep();
     show(placeSection);
-    subTitle.textContent = "Page 1 · Place cube";
+    subTitle.textContent = "Page 1 Â· Place cube";
   }
 
   async function loadStep(){
@@ -1127,10 +1127,10 @@ APP_HTML = r"""<!doctype html>
     idxPill.textContent = "idx " + (idx+1) + " / " + activePreset.order.length;
 
     placeTitle.textContent = (phase === "undo")
-      ? ("UNDO " + prevPresetName.toUpperCase() + " → then MAKE " + activePresetName.toUpperCase())
+      ? ("UNDO " + prevPresetName.toUpperCase() + " â†’ then MAKE " + activePresetName.toUpperCase())
       : ("MAKE " + activePresetName.toUpperCase());
 
-    placeSub.textContent = "Page 1 · Place cube in fixture (then go to execution page)";
+    placeSub.textContent = "Page 1 Â· Place cube in fixture (then go to execution page)";
 
     if(phase === "undo"){
       if(!prevPresetName){
@@ -1160,7 +1160,7 @@ APP_HTML = r"""<!doctype html>
 
   function loadCubePage(){
     cubeTitle.textContent = "Cube " + currentPos;
-    cubeSub.textContent = "Page 2 · Send bytes to solver (you can send multiple times)";
+    cubeSub.textContent = "Page 2 Â· Send bytes to solver (you can send multiple times)";
     cubeModePill.textContent = "phase: " + phase.toUpperCase();
     cubePosPill.textContent = "cube " + currentPos;
     cubeIdxPill.textContent = "idx " + (idx+1) + " / " + activePreset.order.length;
@@ -1182,7 +1182,7 @@ APP_HTML = r"""<!doctype html>
       }
     }
 
-    notesBox.innerHTML = (notes && notes.length) ? notes.map(n => "• " + n).join("<br>") : "(none)";
+    notesBox.innerHTML = (notes && notes.length) ? notes.map(n => "â€¢ " + n).join("<br>") : "(none)";
     movesPre.textContent = (moves && moves.length) ? moves.join(" ") : "(none)";
     serialPre.textContent = (serial && serial.length) ? serial.join("\\n") : "(none)";
 
@@ -1234,14 +1234,14 @@ APP_HTML = r"""<!doctype html>
         phase = "make";
         await loadStep();
         show(placeSection);
-        subTitle.textContent = "Page 1 · Place cube";
+        subTitle.textContent = "Page 1 Â· Place cube";
         logAll("Switched to MAKE for the same cube " + currentPos);
         return;
       }else{
         phase = "make";
         await loadStep();
         show(placeSection);
-        subTitle.textContent = "Page 1 · Place cube";
+        subTitle.textContent = "Page 1 Â· Place cube";
         logAll("UNDO unavailable, continuing with MAKE for the same cube " + currentPos);
         return;
       }
@@ -1252,7 +1252,7 @@ APP_HTML = r"""<!doctype html>
       phase = (prevPresetName && prevPresetName !== activePresetName) ? "undo" : "make";
       await loadStep();
       show(placeSection);
-      subTitle.textContent = "Page 1 · Place cube";
+      subTitle.textContent = "Page 1 Â· Place cube";
       return;
     }
 
@@ -1280,19 +1280,19 @@ APP_HTML = r"""<!doctype html>
   runSolverBtn.addEventListener("click", () => {
     loadCubePage();
     show(cubeSection);
-    subTitle.textContent = "Page 2 · Cube execution";
+    subTitle.textContent = "Page 2 Â· Cube execution";
   });
 
   backToPlaceBtn.addEventListener("click", async () => {
     show(placeSection);
-    subTitle.textContent = "Page 1 · Place cube";
+    subTitle.textContent = "Page 1 Â· Place cube";
   });
 
   redoBtn.addEventListener("click", async () => {
     logAll("UI: Redo pressed. Reloading current step.");
     await loadStep();
     show(placeSection);
-    subTitle.textContent = "Page 1 · Place cube";
+    subTitle.textContent = "Page 1 Â· Place cube";
   });
 
   sendBtn.addEventListener("click", doSendCurrent);
