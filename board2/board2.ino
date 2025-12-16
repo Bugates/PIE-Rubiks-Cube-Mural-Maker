@@ -53,8 +53,11 @@ void loop() {
     int direction     = code % 10;
 
     if (receivedBoard == boardID) {
-      if (motorID == 4){
+      if (motorID == 4 && direction != 3){
         microStep = 4000;
+      }
+      if (motorID == 4 && direction == 3){
+        microStep = 100;
       }
       runMotor(motorID-1, direction);
     }
