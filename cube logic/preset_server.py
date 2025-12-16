@@ -248,7 +248,7 @@ INSERT_BOTTOM = [241]
 INSERT_SIDES  = [222, 231, 222, 231]
 
 EJECT_SIDES   = [221, 232, 221, 232]
-EJECT_BOTTOM  = [242]
+EJECT_BOTTOM  = [213, 242, 214]
 
 VALID_COLS = set(["w", "r", "o", "b", "g", "y", "."])
 
@@ -792,13 +792,13 @@ APP_HTML = r"""<!doctype html>
         <button class="btn secondary" id="ejectBtn" type="button">Eject ▾</button>
         <div class="menu" id="ejectMenu">
           <button class="btn secondary" type="button" id="ejectSidesBtn">Eject sides (221,232,221,232)</button>
-          <button class="btn secondary" type="button" id="ejectBottomBtn">Eject bottom (242)</button>
+          <button class="btn secondary" type="button" id="ejectBottomBtn">Eject bottom (213, 242, 214)</button>
           <div class="mini-note">Always available.</div>
         </div>
       </div>
 
-      <button class="btn secondary" id="send251Btn" type="button">
-        Turn 45
+      <button class="btn secondary" id="send213Btn" type="button">
+        Send 213
       </button>
 
 
@@ -1030,7 +1030,7 @@ APP_HTML = r"""<!doctype html>
   const insertSidesBtn = document.getElementById("insertSidesBtn");
   const ejectSidesBtn = document.getElementById("ejectSidesBtn");
   const ejectBottomBtn = document.getElementById("ejectBottomBtn");
-  const send251Btn = document.getElementById("send251Btn");
+  const send213Btn = document.getElementById("send213Btn");
 
   const globalLog = document.getElementById("globalLog");
   const placeLog = document.getElementById("placeLog");
@@ -1148,10 +1148,10 @@ APP_HTML = r"""<!doctype html>
   insertSidesBtn.addEventListener("click", () => sendBytes([222,231,222,231], "Insert sides"));
 
   ejectSidesBtn.addEventListener("click", () => sendBytes([221,232,221,232], "Eject sides"));
-  ejectBottomBtn.addEventListener("click", () => sendBytes([242], "Eject bottom"));
+  ejectBottomBtn.addEventListener("click", () => sendBytes([213, 242, 214], "Eject bottom"));
 
-  send251Btn.addEventListener("click", () => {
-    sendBytes([251], "Turn 45");
+  send213Btn.addEventListener("click", () => {
+    sendBytes([213], "Turn 45");
   });
 
 
