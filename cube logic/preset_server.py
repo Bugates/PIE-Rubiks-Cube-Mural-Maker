@@ -18,11 +18,6 @@ try:
 except ImportError:
     HAS_SERIAL = False
 
-
-# =========================================================
-# NETWORK HELPERS
-# =========================================================
-
 def get_local_ip() -> str:
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -48,9 +43,6 @@ def print_qr(url: str) -> None:
         print("(Install 'qrcode' Python package to see ASCII QR code.)")
 
 
-# =========================================================
-# SERIAL HELPERS (BYTES ONLY, WAIT FOR DONE)
-# =========================================================
 
 def find_ports() -> List[str]:
     return glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
@@ -199,9 +191,6 @@ def run_serial_commands(commands: List[object]) -> Dict[str, object]:
         print("Finished.")
 
 
-# =========================================================
-# MOVE / UNDO HELPERS
-# =========================================================
 
 INV_MOVE: Dict[str, str] = {
     'F': "F'", "F'": 'F',
@@ -255,34 +244,55 @@ def key_rc(r: int, c: int) -> str:
     return f"{r},{c}"
 
 
-# =========================================================
-# INSERT / EJECT BYTE MACROS (ALWAYS AVAILABLE IN UI)
-# =========================================================
-
 INSERT_BOTTOM = [241]
 INSERT_SIDES  = [222, 231, 222, 231]
 
 EJECT_SIDES   = [221, 232, 221, 232]
 EJECT_BOTTOM  = [242]
 
+VALID_COLS = set(["w", "r", "o", "b", "g", "y", "."])
 
-# =========================================================
-# PRESET DATA (YOUR 5x4 = 20 CUBES)
-# order is 1,1 -> 1,4 then 2,1 -> 2,4 ... 5,4
-# =========================================================
+def _norm_cell(ch: str) -> str:
+    if not ch:
+        return "."
+    c = str(ch).strip().lower()
+    if c in ["w", "r", "o", "b", "g", "y"]:
+        return c
+    if c == ".":
+        return "."
+    return "."
+
+
+def build_preview_12x15_from_u_faces(preset: Dict[str, object]) -> List[List[str]]:
+    rows = int(preset.get("rows", 5))
+    cols = int(preset.get("cols", 4))
+    cubes = preset.get("cubes", {}) or {}
+
+    out = [["." for _ in range(cols * 3)] for __ in range(rows * 3)]
+
+    for r in range(1, rows + 1):
+        for c in range(1, cols + 1):
+            pos = key_rc(r, c)
+            entry = cubes.get(pos) or {}
+            face = entry.get("u_face")
+
+            if not face:
+                continue
+
+            for i in range(3):
+                for j in range(3):
+                    ch = "."
+                    try:
+                        ch = _norm_cell(face[i][j])
+                    except Exception:
+                        ch = "."
+                    out[(r - 1) * 3 + i][(c - 1) * 3 + j] = ch
+
+    return out
+
 
 def make_order(rows: int, cols: int) -> List[str]:
     return [key_rc(r, c) for r in range(1, rows + 1) for c in range(1, cols + 1)]
-
-
-def preview_12x15_from_strings(lines: List[str]) -> List[str]:
-    out = []
-    for ln in lines[:12]:
-        ln = (ln[:15]).ljust(15, ".")
-        out.append(ln)
-    while len(out) < 12:
-        out.append("." * 15)
-    return out
 
 
 PRESETS: Dict[str, Dict[str, object]] = {
@@ -291,136 +301,142 @@ PRESETS: Dict[str, Dict[str, object]] = {
         "rows": 5,
         "cols": 4,
         "order": make_order(5, 4),
-        "preview_12x15": preview_12x15_from_strings([
-            ".....MMMMM.....",
-            "....MMMMMMM....",
-            "...MM..M..MM...",
-            "..MMM.MMM.MMM..",
-            "..MM..MMM..MM..",
-            "..MMMMMMMMMMM..",
-            "..MM.MMMMM.MM..",
-            "..MM..MMM..MM..",
-            "...MM.....MM...",
-            "....MMMMMMM....",
-            ".....MMMMM.....",
-            "...............",
-        ]),
         "cubes": {
             "1,1": {
+                "u_face": [['w','w','w'],['w','w','r'],['w','w','o']],
                 "moves": ['R', 'F', "R'", "F'"],
                 "serial": [122, 112, 121, 111],
                 "orientation": {'U': 'w', 'D': 'y', 'F': 'r', 'B': 'o', 'R': 'b', 'L': 'g'},
                 "notes": []
             },
             "1,2": {
+                "u_face": [['r','r','r'],['r','r','r'],['o','o','y']],
                 "moves": ['F', "D'", 'F'],
                 "serial": [112, 212, 112],
                 "orientation": {'U': 'r', 'D': 'o', 'F': 'w', 'B': 'y', 'R': 'g', 'L': 'b'},
                 "notes": []
             },
             "1,3": {
+                "u_face": [['r','r','w'],['r','r','r'],['y','b','y']],
                 "moves": ['D', "F'", 'D', "R'", 'F', "D'", 'R'],
                 "serial": [211, 111, 211, 121, 112, 212, 122],
                 "orientation": {'U': 'r', 'D': 'o', 'F': 'b', 'B': 'g', 'R': 'w', 'L': 'y'},
                 "notes": []
             },
             "1,4": {
+                "u_face": [['w','w','w'],['r','r','w'],['w','w','w']],
                 "moves": ['D', 'F', "B'", 'R'],
                 "serial": [211, 112, 131, 122],
                 "orientation": {'U': 'r', 'D': 'o', 'F': 'b', 'B': 'g', 'R': 'w', 'L': 'y'},
                 "notes": []
             },
             "2,1": {
+                "u_face": [['w','o','y'],['w','o','y'],['w','w','o']],
                 "moves": ['R', "D'", 'L', "F'"],
                 "serial": [122, 212, 142, 111],
                 "orientation": {'U': 'o', 'D': 'r', 'F': 'w', 'B': 'y', 'R': 'b', 'L': 'g'},
                 "notes": []
             },
             "2,2": {
+                "u_face": [['o','y','y'],['o','o','y'],['y','y','y']],
                 "moves": ["L'", 'D', "B'", 'L', 'F', 'R'],
                 "serial": [141, 211, 131, 142, 112, 122],
                 "orientation": {'U': 'o', 'D': 'r', 'F': 'b', 'B': 'g', 'R': 'y', 'L': 'w'},
                 "notes": []
             },
             "2,3": {
+                "u_face": [['y','b','y'],['y','b','b'],['y','b','b']],
                 "moves": ['B', "D'", "B'", "L'"],
                 "serial": [132, 212, 131, 141],
                 "orientation": {'U': 'b', 'D': 'g', 'F': 'w', 'B': 'y', 'R': 'r', 'L': 'o'},
                 "notes": ["Center exchange: Blue up change center to white"]
             },
             "2,4": {
+                "u_face": [['y','y','w'],['y','y','y'],['b','b','w']],
                 "moves": ["R'", 'D', 'F', 'D', 'R', 'F'],
                 "serial": [121, 211, 112, 211, 122, 112],
                 "orientation": {'U': 'y', 'D': 'w', 'F': 'o', 'B': 'r', 'R': 'b', 'L': 'g'},
                 "notes": []
             },
             "3,1": {
+                "u_face": [['w','w','w'],['w','w','r'],['w','r','r']],
                 "moves": ["D'", "B'", 'R', 'B', "D'", "F'"],
                 "serial": [212, 131, 122, 132, 212, 111],
                 "orientation": {'U': 'w', 'D': 'y', 'F': 'b', 'B': 'g', 'R': 'o', 'L': 'r'},
                 "notes": []
             },
             "3,2": {
+                "u_face": [['y','y','y'],['r','b','r'],['r','b','r']],
                 "moves": ['R', "L'", 'B'],
                 "serial": [122, 141, 132],
                 "orientation": {'U': 'b', 'D': 'g', 'F': 'o', 'B': 'r', 'R': 'w', 'L': 'y'},
                 "notes": []
             },
             "3,3": {
+                "u_face": [['y','y','y'],['r','b','r'],['r','b','r']],
                 "moves": ['R', "L'", 'B'],
                 "serial": [122, 141, 132],
                 "orientation": {'U': 'b', 'D': 'g', 'F': 'o', 'B': 'r', 'R': 'w', 'L': 'y'},
                 "notes": []
             },
             "3,4": {
+                "u_face": [['w','w','w'],['r','w','w'],['r','r','w']],
                 "moves": ['D', 'B', "L'", "B'", 'D', 'F'],
                 "serial": [211, 132, 141, 131, 211, 112],
                 "orientation": {'U': 'w', 'D': 'y', 'F': 'g', 'B': 'b', 'R': 'r', 'L': 'o'},
                 "notes": []
             },
             "4,1": {
+                "u_face": [['r','r','r'],['o','o','r'],['o','o','o']],
                 "moves": ['B', 'R', "F'", 'R', 'F', 'B'],
                 "serial": [132, 122, 111, 122, 112, 132],
                 "orientation": {'U': 'o', 'D': 'r', 'F': 'g', 'B': 'b', 'R': 'w', 'L': 'y'},
                 "notes": []
             },
             "4,2": {
+                "u_face": [['r','b','b'],['b','b','b'],['b','b','b']],
                 "moves": ['L', 'D', "L'"],
                 "serial": [142, 211, 141],
                 "orientation": {'U': 'b', 'D': 'g', 'F': 'w', 'B': 'y', 'R': 'r', 'L': 'o'},
                 "notes": ["Center exchange: Blue up make center orange"]
             },
             "4,3": {
+                "u_face": [['b','b','r'],['b','b','b'],['b','b','b']],
                 "moves": ["R'", 'D', 'R'],
                 "serial": [121, 211, 122],
                 "orientation": {'U': 'b', 'D': 'g', 'F': 'w', 'B': 'y', 'R': 'r', 'L': 'o'},
                 "notes": ["Center exchange: Blue up make center orange"]
             },
             "4,4": {
+                "u_face": [['r','r','r'],['r','o','o'],['o','o','o']],
                 "moves": ['B', "L'", "B'", 'L', 'B', "L'"],
                 "serial": [132, 141, 131, 142, 132, 141],
                 "orientation": {'U': 'o', 'D': 'r', 'F': 'g', 'B': 'b', 'R': 'w', 'L': 'y'},
                 "notes": []
             },
             "5,1": {
+                "u_face": [['o','o','b'],['w','w','b'],['w','o','o']],
                 "moves": ['B', 'R', "D'", "F'"],
                 "serial": [132, 122, 212, 111],
                 "orientation": {'U': 'w', 'D': 'y', 'F': 'g', 'B': 'b', 'R': 'r', 'L': 'o'},
                 "notes": []
             },
             "5,2": {
+                "u_face": [['b','b','b'],['b','b','w'],['o','w','w']],
                 "moves": ["F'", 'D', 'R', 'D', 'R', 'F'],
                 "serial": [111, 211, 122, 211, 122, 112],
                 "orientation": {'U': 'b', 'D': 'g', 'F': 'o', 'B': 'r', 'R': 'w', 'L': 'y'},
                 "notes": []
             },
             "5,3": {
+                "u_face": [['b','b','b'],['w','b','b'],['w','w','o']],
                 "moves": ['D', 'F', 'B', "L'", "B'"],
                 "serial": [211, 112, 132, 141, 131],
                 "orientation": {'U': 'b', 'D': 'g', 'F': 'o', 'B': 'r', 'R': 'w', 'L': 'y'},
                 "notes": []
             },
             "5,4": {
+                "u_face": [['b','o','o'],['b','w','w'],['o','o','o']],
                 "moves": ["B'", 'L', 'F'],
                 "serial": [131, 142, 112],
                 "orientation": {'U': 'w', 'D': 'y', 'F': 'b', 'B': 'g', 'R': 'o', 'L': 'r'},
@@ -434,136 +450,146 @@ PRESETS: Dict[str, Dict[str, object]] = {
         "rows": 5,
         "cols": 4,
         "order": make_order(5, 4),
-        "preview_12x15": preview_12x15_from_strings([
-            "...............",
-            "......DD.......",
-            "....DDDDDD.....",
-            "...DDDDDDDD....",
-            "..DDDDDDDDDD...",
-            "..DDDDDDDDDD...",
-            "...DDDDDDDDD...",
-            "....DDDDDD.....",
-            ".....DDDD......",
-            "......DD.......",
-            "...............",
-            "...............",
-        ]),
         "cubes": {
             "1,1": {
+                "u_face": [['w','w','w'],['w','w','w'],['w','w','o']],
                 "moves": ['R', 'D', "R'"],
                 "serial": [122, 211, 121],
                 "orientation": {'U': 'w', 'D': 'y', 'F': 'g', 'B': 'b', 'R': 'r', 'L': 'o'},
                 "notes": []
             },
             "1,2": {
+                "u_face": [['y','y','y'],['y','y','y'],['y','b','y']],
                 "moves": ["R'", 'L', "F'", 'R', "L'"],
                 "serial": [121, 142, 111, 122, 141],
                 "orientation": {'U': 'y', 'D': 'w', 'F': 'r', 'B': 'o', 'R': 'g', 'L': 'b'},
                 "notes": []
             },
             "1,3": {
+                "u_face": [['y','w','w'],['y','y','w'],['y','y','w']],
                 "moves": ['R', "B'", "R'", 'B', 'R', "B'"],
                 "serial": [122, 131, 121, 132, 122, 131],
                 "orientation": {'U': 'y', 'D': 'w', 'F': 'b', 'B': 'g', 'R': 'r', 'L': 'o'},
                 "notes": []
             },
             "1,4": {
+                "u_face": [['w','w','w'],['w','w','w'],['w','w','w']],
                 "moves": [],
                 "serial": [],
                 "orientation": None,
                 "notes": ["Already solved / stack: white side up (WWW/WWW/WWW)"]
             },
             "2,1": {
-                "moves": ['L', 'B', "R'", 'B', 'R', 'L'],
-                "serial": [142, 132, 121, 132, 122, 142],
-                "orientation": {'U': 'y', 'D': 'w', 'F': 'b', 'B': 'g', 'R': 'r', 'L': 'o'},
-                "notes": []
-            },
+                "u_face":[
+                ['o','o','o'],
+                ['w','o','o'],
+                ['w','w','w']
+                ],
+                "moves":['D',"L'","F'",'L'],
+                "serial":[211,141,111,142],
+                "orientation":{'U':'o','D':'r','F':'b','B':'g','R':'y','L':'w'},
+                "notes":[]
+                },
             "2,2": {
+                "u_face": [['y','y','y'],['o','y','y'],['y','y','y']],
                 "moves": ["F'", 'B', "L'", 'F', "B'"],
                 "serial": [111, 132, 141, 112, 131],
                 "orientation": {'U': 'y', 'D': 'w', 'F': 'r', 'B': 'o', 'R': 'g', 'L': 'b'},
                 "notes": []
             },
             "2,3": {
+                "u_face": [['y','y','w'],['y','w','w'],['w','w','w']],
                 "moves": ["B'", 'L', 'D', 'L', 'D', "B'"],
                 "serial": [131, 142, 211, 142, 211, 131],
                 "orientation": {'U': 'w', 'D': 'y', 'F': 'g', 'B': 'b', 'R': 'r', 'L': 'o'},
                 "notes": []
             },
             "2,4": {
+                "u_face": [['w','w','w'],['w','w','w'],['w','w','y']],
                 "moves": ["F'", "R'", 'F', 'R', "D'", 'F'],
                 "serial": [111, 121, 112, 122, 212, 112],
                 "orientation": {'U': 'w', 'D': 'y', 'F': 'g', 'B': 'b', 'R': 'r', 'L': 'o'},
                 "notes": []
             },
             "3,1": {
-                "moves": [],
-                "serial": [],
-                "orientation": None,
-                "notes": ["No data for this cube yet (placeholder)."]
+                "u_face": [['w','w','y'],['w','y','y'],['w','y','y']],
+                "moves": ['L', 'B', "R'", 'B', 'R', 'L'],
+                "serial": [142, 132, 121, 132, 122, 142],
+                "orientation": {'U': 'y', 'D': 'w', 'F': 'b', 'B': 'g', 'R': 'r', 'L': 'o'},
+                "notes": []
             },
             "3,2": {
+                "u_face": [['y','y','y'],['y','y','y'],['y','y','o']],
                 "moves": ['R', 'D', "R'"],
                 "serial": [122, 211, 121],
                 "orientation": {'U': 'y', 'D': 'w', 'F': 'b', 'B': 'g', 'R': 'r', 'L': 'o'},
                 "notes": ["Center exchange: Orange center switch"]
             },
             "3,3": {
-                "moves": [],
-                "serial": [],
-                "orientation": None,
-                "notes": ["No data for this cube yet (placeholder)."]
+                "u_face": [['y','w','w'],['y','y','y'],['y','y','y']],
+                "moves": ['B', "R'", "D'", 'R', "D'", 'B'],
+                "serial": [132, 121, 212, 122, 212, 132],
+                "orientation": {'U': 'y', 'D': 'w', 'F': 'b', 'B': 'g', 'R': 'r', 'L': 'o'},
+                "notes": []
             },
             "3,4": {
-                "moves": [],
-                "serial": [],
-                "orientation": None,
-                "notes": ["No data for this cube yet (placeholder)."]
+                "u_face": [['w','y','y'],['y','y','y'],['o','y','y']],
+                "moves": ["L'", 'D', 'L', "B'", "D'", 'B'],
+                "serial": [141, 211, 142, 131, 212, 132],
+                "orientation": {'U': 'y', 'D': 'w', 'F': 'b', 'B': 'g', 'R': 'r', 'L': 'o'},
+                "notes": []
             },
             "4,1": {
-                "moves": [],
-                "serial": [],
-                "orientation": None,
-                "notes": ["No data for this cube yet (placeholder)."]
+                "u_face": [['w','y','y'],['w','w','y'],['b','w','b']],
+                "moves": ['F', 'D', 'R', "F'", "B'", 'D', "B'", 'R'],
+                "serial": [112, 211, 122, 111, 131, 211, 131, 122],
+                "orientation": {'U': 'w', 'D': 'y', 'F': 'g', 'B': 'b', 'R': 'r', 'L': 'o'},
+                "notes": []
             },
             "4,2": {
+                "u_face": [['y','y','y'],['y','y','y'],['y','y','y']],
                 "moves": [],
                 "serial": [],
                 "orientation": None,
                 "notes": ["Already solved / stack: yellow side up (YYY/YYY/YYY)"]
             },
             "4,3": {
-                "moves": [],
-                "serial": [],
-                "orientation": None,
-                "notes": ["No data for this cube yet (placeholder)."]
+                "u_face": [['o','o','o'],['y','y','y'],['y','y','y']],
+                "moves": ['B'],
+                "serial": [132],
+                "orientation": {'U': 'y', 'D': 'w', 'F': 'b', 'B': 'g', 'R': 'r', 'L': 'o'},
+                "notes": []
             },
             "4,4": {
-                "moves": [],
-                "serial": [],
-                "orientation": None,
-                "notes": ["No data for this cube yet (placeholder)."]
+                "u_face": [['y','y','y'],['y','y','w'],['y','w','w']],
+                "moves": ["F'", 'R', 'D', 'R', 'D', "F'"],
+                "serial": [111, 122, 211, 122, 211, 111],
+                "orientation": {'U': 'y', 'D': 'w', 'F': 'b', 'B': 'g', 'R': 'r', 'L': 'o'},
+                "notes": []
             },
             "5,1": {
+                "u_face": [['b','b','b'],['b','b','b'],['b','b','b']],
                 "moves": [],
                 "serial": [],
                 "orientation": None,
                 "notes": ["Already solved / stack: blue side up (BBB/BBB/BBB)"]
             },
             "5,2": {
+                "u_face": [['b','b','b'],['b','b','b'],['b','b','b']],
                 "moves": [],
                 "serial": [],
                 "orientation": None,
                 "notes": ["Already solved / stack: blue side up (BBB/BBB/BBB)"]
             },
             "5,3": {
+                "u_face": [['b','b','b'],['b','b','b'],['b','b','b']],
                 "moves": [],
                 "serial": [],
                 "orientation": None,
                 "notes": ["Already solved / stack: blue side up (BBB/BBB/BBB)"]
             },
             "5,4": {
+                "u_face": [['b','b','b'],['b','b','b'],['b','b','b']],
                 "moves": [],
                 "serial": [],
                 "orientation": None,
@@ -580,10 +606,11 @@ def get_cube_entry(preset_name: str, pos_key: str) -> Dict[str, object]:
     entry = cubes.get(pos_key)
     if entry is None:
         return {
+            "u_face": [['.','.','.'],['.','.','.'],['.','.','.']],
             "moves": [],
             "serial": [],
             "orientation": None,
-            "notes": ["No data for this cube yet (placeholder)."]
+            "notes": []
         }
     return entry
 
@@ -596,11 +623,18 @@ def build_preset_payload(name: str) -> Dict[str, object]:
         "rows": p.get("rows", 5),
         "cols": p.get("cols", 4),
         "order": p.get("order", []),
-        "preview_12x15": p.get("preview_12x15", ["." * 15] * 12),
+        "preview_12x15": [],
         "cubes": {},
     }
     for k in out["order"]:
         out["cubes"][k] = get_cube_entry(name, k)
+
+    out["preview_12x15"] = build_preview_12x15_from_u_faces({
+        "rows": out["rows"],
+        "cols": out["cols"],
+        "cubes": out["cubes"]
+    })
+
     return out
 
 
@@ -627,20 +661,12 @@ def compute_undo_for_cube(prev_preset: str, pos_key: str) -> Dict[str, object]:
     }
 
 
-# =========================================================
-# SINGLE-PAGE UI (HOME + ORIENTATION PAGE + CUBE PAGE)
-# - No draw tab
-# - No algorithm
-# - Presets only
-# - Insert/Eject available everywhere
-# - Undo flow supported when switching presets (localStorage lastPresetName)
-# =========================================================
 
 APP_HTML = r"""<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Rubikâ€™s Cube Mural Presets</title>
+  <title>Rubik’s Cube Mural Presets</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root{
@@ -682,8 +708,7 @@ APP_HTML = r"""<!doctype html>
       display:grid; grid-template-columns:repeat(15, 10px); gap:2px;
     }
     .px{ width:10px; height:10px; border-radius:2px; border:1px solid rgba(0,0,0,0.08); background:#fff; }
-    .px.on.mario{ background:#ef4444; }
-    .px.on.duck{ background:#f59e0b; }
+
     .pill{
       display:inline-block; padding:4px 8px; border:1px solid var(--border); border-radius:999px;
       font-size:12px; color:var(--muted); background:#fff;
@@ -713,6 +738,35 @@ APP_HTML = r"""<!doctype html>
     .menu .btn + .btn{ margin-top:8px; }
     .mini-note{ font-size:12px; color:var(--muted); margin-top:6px; }
     .hr{ height:1px; background:#e5e7eb; margin:12px 0; }
+
+    .modal-backdrop{
+      position:fixed; inset:0;
+      background:rgba(15,23,42,0.45);
+      display:none;
+      z-index:500;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .modal-backdrop.open{ display:flex; }
+    .modal{
+      width:min(520px, 100%);
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:16px;
+      box-shadow:0 24px 60px rgba(15,23,42,0.25);
+      padding:14px;
+    }
+    .modal .h2{ margin:0 0 6px; }
+    .modal .row{ justify-content:space-between; }
+    .modal select{
+      width:100%;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      font-size:14px;
+      background:#fff;
+    }
   </style>
 </head>
 <body>
@@ -726,7 +780,7 @@ APP_HTML = r"""<!doctype html>
 
     <div class="row">
       <div class="dropdown">
-        <button class="btn secondary" id="insertBtn" type="button">Insert â–¾</button>
+        <button class="btn secondary" id="insertBtn" type="button">Insert ▾</button>
         <div class="menu" id="insertMenu">
           <button class="btn secondary" type="button" id="insertBottomBtn">Insert bottom (241)</button>
           <button class="btn secondary" type="button" id="insertSidesBtn">Insert sides (222,231,222,231)</button>
@@ -735,7 +789,7 @@ APP_HTML = r"""<!doctype html>
       </div>
 
       <div class="dropdown">
-        <button class="btn secondary" id="ejectBtn" type="button">Eject â–¾</button>
+        <button class="btn secondary" id="ejectBtn" type="button">Eject ▾</button>
         <div class="menu" id="ejectMenu">
           <button class="btn secondary" type="button" id="ejectSidesBtn">Eject sides (221,232,221,232)</button>
           <button class="btn secondary" type="button" id="ejectBottomBtn">Eject bottom (242)</button>
@@ -743,7 +797,35 @@ APP_HTML = r"""<!doctype html>
         </div>
       </div>
 
+      <button class="btn secondary" id="send251Btn" type="button">
+        Turn 45
+      </button>
+
+
       <button class="btn secondary" id="homeBtn" type="button">Home</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="undoModalBackdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="undoModalTitle">
+    <div class="h2" id="undoModalTitle">Choose undo</div>
+    <div class="muted" id="undoModalSubtitle">A previous preset was run. Choose what to undo before starting.</div>
+    <div class="hr"></div>
+
+    <div class="box">
+      <div class="muted" style="margin-bottom:8px;"><b>Undo option</b></div>
+      <select id="undoSelect">
+        <option value="none">Undo NONE</option>
+      </select>
+      <div class="mini-note" id="undoModalNote"></div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="row">
+      <button class="btn secondary" type="button" id="undoCancelBtn">Cancel</button>
+      <button class="btn" type="button" id="undoConfirmBtn">Confirm</button>
     </div>
   </div>
 </div>
@@ -755,10 +837,10 @@ APP_HTML = r"""<!doctype html>
 
       <div class="card">
         <div class="h2">Mario preset</div>
-        <div class="muted">20 cubes (5Ã—4). Order: 1,1 â†’ 1,4 then 2,1 â†’ 2,4 ... 5,4</div>
+        <div class="muted">20 cubes (5×4). Order: 1,1 → 1,4 then 2,1 → 2,4 ... 5,4</div>
         <div class="preview-wrap">
           <div>
-            <div class="pill">Preview 12Ã—15</div>
+            <div class="pill">Preview 12×15</div>
             <div class="preview" id="marioPreview"></div>
           </div>
           <div style="min-width:240px;">
@@ -768,17 +850,17 @@ APP_HTML = r"""<!doctype html>
             </div>
             <div class="hr"></div>
             <button class="btn" type="button" id="startMarioBtn">Start Mario</button>
-            <div class="mini-note">If you previously ran Duck, this will UNDO Duck cube-by-cube, then MAKE Mario.</div>
+            <div class="mini-note">If you previously ran Duck, you can choose Undo DUCK or Undo NONE before starting.</div>
           </div>
         </div>
       </div>
 
       <div class="card">
         <div class="h2">Duck preset</div>
-        <div class="muted">20 cubes (5Ã—4). Order: 1,1 â†’ 1,4 then 2,1 â†’ 2,4 ... 5,4</div>
+        <div class="muted">20 cubes (5×4). Order: 1,1 → 1,4 then 2,1 → 2,4 ... 5,4</div>
         <div class="preview-wrap">
           <div>
-            <div class="pill">Preview 12Ã—15</div>
+            <div class="pill">Preview 12×15</div>
             <div class="preview" id="duckPreview"></div>
           </div>
           <div style="min-width:240px;">
@@ -787,7 +869,7 @@ APP_HTML = r"""<!doctype html>
             </div>
             <div class="hr"></div>
             <button class="btn" type="button" id="startDuckBtn">Start Duck</button>
-            <div class="mini-note">If you previously ran Mario, this will UNDO Mario cube-by-cube, then MAKE Duck.</div>
+            <div class="mini-note">If you previously ran Mario, you can choose Undo MARIO or Undo NONE before starting.</div>
           </div>
         </div>
       </div>
@@ -806,7 +888,7 @@ APP_HTML = r"""<!doctype html>
       <div class="row" style="justify-content:space-between;">
         <div>
           <div class="h2" id="placeTitle">Place cube</div>
-          <div class="muted" id="placeSub">Page 1 Â· Place the cube in the fixture</div>
+          <div class="muted" id="placeSub">Page 1 · Place the cube in the fixture</div>
         </div>
         <div class="row">
           <span class="pill" id="modePill">mode</span>
@@ -830,12 +912,12 @@ APP_HTML = r"""<!doctype html>
         <div class="muted">Page 1 actions</div>
         <div class="row">
           <button class="btn secondary" type="button" id="placeBackBtn">Back</button>
-          <button class="btn" type="button" id="runSolverBtn">Run solver â†’</button>
+          <button class="btn" type="button" id="runSolverBtn">Run solver →</button>
         </div>
       </div>
 
       <div class="mini-note">
-        â€œRun solverâ€ here just means: go to the cube execution page for this cube, where you can send the preset bytes multiple times.
+        “Run solver” here just means: go to the cube execution page for this cube, where you can send the preset bytes multiple times.
       </div>
     </div>
 
@@ -850,7 +932,7 @@ APP_HTML = r"""<!doctype html>
       <div class="row" style="justify-content:space-between;">
         <div>
           <div class="h2" id="cubeTitle">Cube</div>
-          <div class="muted" id="cubeSub">Page 2 Â· Send commands</div>
+          <div class="muted" id="cubeSub">Page 2 · Send commands</div>
         </div>
         <div class="row">
           <span class="pill" id="cubeModePill">mode</span>
@@ -911,6 +993,7 @@ APP_HTML = r"""<!doctype html>
     g: { name: "Green", css: "c-g" },
     w: { name: "White", css: "c-w" },
     y: { name: "Yellow", css: "c-y" },
+    ".": { name: "Empty", css: "" },
   };
 
   const FACE_ORDER = ["U","F","R","L","B","D"];
@@ -947,6 +1030,7 @@ APP_HTML = r"""<!doctype html>
   const insertSidesBtn = document.getElementById("insertSidesBtn");
   const ejectSidesBtn = document.getElementById("ejectSidesBtn");
   const ejectBottomBtn = document.getElementById("ejectBottomBtn");
+  const send251Btn = document.getElementById("send251Btn");
 
   const globalLog = document.getElementById("globalLog");
   const placeLog = document.getElementById("placeLog");
@@ -978,18 +1062,30 @@ APP_HTML = r"""<!doctype html>
   const nextBtn = document.getElementById("nextBtn");
   const nextHint = document.getElementById("nextHint");
 
+  const undoModalBackdrop = document.getElementById("undoModalBackdrop");
+  const undoSelect = document.getElementById("undoSelect");
+  const undoCancelBtn = document.getElementById("undoCancelBtn");
+  const undoConfirmBtn = document.getElementById("undoConfirmBtn");
+  const undoModalSubtitle = document.getElementById("undoModalSubtitle");
+  const undoModalNote = document.getElementById("undoModalNote");
+  const undoModalTitle = document.getElementById("undoModalTitle");
+
   let marioPreset = null;
   let duckPreset = null;
 
   let activePresetName = null;
   let activePreset = null;
 
-  let prevPresetName = localStorage.getItem("lastPresetName") || "";
-  let phase = "make"; // "undo" then "make" when switching
-  let idx = 0;        // cube index
+  let storedLastPresetName = localStorage.getItem("lastPresetName") || "";
+
+  let undoFromPreset = "";
+  let phase = "make";
+  let idx = 0;
   let currentPos = "";
   let currentEntry = null;
   let currentUndoInfo = null;
+
+  let pendingStartPresetName = "";
 
   function show(section){
     [homeSection, placeSection, cubeSection].forEach(s => s.classList.remove("active"));
@@ -1054,15 +1150,20 @@ APP_HTML = r"""<!doctype html>
   ejectSidesBtn.addEventListener("click", () => sendBytes([221,232,221,232], "Eject sides"));
   ejectBottomBtn.addEventListener("click", () => sendBytes([242], "Eject bottom"));
 
-  function renderPreview(container, presetName, lines12x15){
+  send251Btn.addEventListener("click", () => {
+    sendBytes([251], "Turn 45");
+  });
+
+
+  function renderPreview(container, grid12x15){
     container.innerHTML = "";
-    const onClass = presetName;
     for(let r=0; r<12; r++){
-      const row = lines12x15[r] || "...............";
+      const row = grid12x15[r] || [];
       for(let c=0; c<15; c++){
-        const ch = row[c] || ".";
+        const ch = (row[c] || ".").toLowerCase();
+        const meta = COLOR_META[ch] || COLOR_META["."];
         const d = document.createElement("div");
-        d.className = "px" + (ch !== "." ? (" on " + onClass) : "");
+        d.className = "px" + (meta.css ? (" " + meta.css) : "");
         container.appendChild(d);
       }
     }
@@ -1071,7 +1172,7 @@ APP_HTML = r"""<!doctype html>
   function setHomePills(){
     marioKpi.textContent = "Mario: " + (marioPreset ? marioPreset.order.length : 0) + " cubes";
     duckKpi.textContent = "Duck: " + (duckPreset ? duckPreset.order.length : 0) + " cubes";
-    lastPresetPill.textContent = "Last preset: " + (prevPresetName || "none");
+    lastPresetPill.textContent = "Last preset: " + (storedLastPresetName || "none");
   }
 
   async function fetchPreset(name){
@@ -1100,26 +1201,109 @@ APP_HTML = r"""<!doctype html>
     orientationHint.textContent = hintText || "";
   }
 
+  function openUndoModal(forPresetName){
+    pendingStartPresetName = forPresetName;
+
+    const last = storedLastPresetName || "";
+    let other = "";
+    if(forPresetName === "duck") other = "mario";
+    if(forPresetName === "mario") other = "duck";
+
+    undoSelect.innerHTML = "";
+    const optNone = document.createElement("option");
+    optNone.value = "none";
+    optNone.textContent = "Undo NONE";
+    undoSelect.appendChild(optNone);
+
+    const shouldOfferOther = (last === other);
+    if(shouldOfferOther){
+      const optOther = document.createElement("option");
+      optOther.value = other;
+      optOther.textContent = "Undo " + other.toUpperCase();
+      undoSelect.appendChild(optOther);
+      undoModalNote.textContent = "Last preset is " + other.toUpperCase() + ". Choose Undo " + other.toUpperCase() + " to run cube-by-cube UNDO before making " + forPresetName.toUpperCase() + ".";
+    }else if(last){
+      undoModalNote.textContent = "Last preset is " + last.toUpperCase() + ". No undo option shown because it does not match the required counterpart.";
+    }else{
+      undoModalNote.textContent = "No previous preset stored. You can start immediately.";
+    }
+
+    undoModalTitle.textContent = "Choose undo for " + forPresetName.toUpperCase();
+    undoModalSubtitle.textContent = "Select what to undo before starting " + forPresetName.toUpperCase() + ".";
+    undoModalBackdrop.classList.add("open");
+    undoModalBackdrop.setAttribute("aria-hidden", "false");
+  }
+
+  function closeUndoModal(){
+    undoModalBackdrop.classList.remove("open");
+    undoModalBackdrop.setAttribute("aria-hidden", "true");
+    pendingStartPresetName = "";
+  }
+
+  undoCancelBtn.addEventListener("click", () => {
+    logAll("UI: Undo choice canceled.");
+    closeUndoModal();
+  });
+
+  undoConfirmBtn.addEventListener("click", async () => {
+    const choice = (undoSelect.value || "none").toLowerCase();
+    const startName = pendingStartPresetName;
+    if(!startName){
+      closeUndoModal();
+      return;
+    }
+
+    let chosenUndo = "";
+    if(choice === "mario" || choice === "duck"){
+      chosenUndo = choice;
+    }else{
+      chosenUndo = "";
+    }
+
+    closeUndoModal();
+    await startPresetWithUndoChoice(startName, chosenUndo);
+  });
+
   async function startPreset(name){
+    const last = storedLastPresetName || "";
+    const other = (name === "duck") ? "mario" : "duck";
+
+    if(last){
+      openUndoModal(name);
+      return;
+    }
+
+    await startPresetWithUndoChoice(name, "");
+  }
+
+  async function startPresetWithUndoChoice(name, undoChoice){
     activePresetName = name;
     activePreset = (name === "mario") ? marioPreset : duckPreset;
     idx = 0;
 
-    prevPresetName = localStorage.getItem("lastPresetName") || "";
+    undoFromPreset = "";
 
-    phase = (prevPresetName && prevPresetName !== activePresetName) ? "undo" : "make";
+    const other = (name === "duck") ? "mario" : "duck";
+    if(undoChoice && (undoChoice === other) && storedLastPresetName === other){
+      undoFromPreset = undoChoice;
+      phase = "undo";
+    }else{
+      phase = "make";
+    }
 
     placeLog.textContent = "";
     cubeLog.textContent = "";
-    logAll("Selected preset: " + activePresetName + " (prev: " + (prevPresetName || "none") + ")");
+    logAll("Selected preset: " + activePresetName + " (stored last: " + (storedLastPresetName || "none") + ")");
+    logAll("Undo choice: " + (undoFromPreset ? ("UNDO " + undoFromPreset.toUpperCase()) : "Undo NONE"));
+
     await loadStep();
     show(placeSection);
-    subTitle.textContent = "Page 1 Â· Place cube";
+    subTitle.textContent = "Page 1 · Place cube";
   }
 
   async function loadStep(){
     currentPos = activePreset.order[idx];
-    currentEntry = activePreset.cubes[currentPos] || { moves:[], serial:[], orientation:null, notes:["No data"] };
+    currentEntry = activePreset.cubes[currentPos] || { moves:[], serial:[], orientation:null, notes:[] };
     currentUndoInfo = null;
 
     modePill.textContent = "phase: " + phase.toUpperCase();
@@ -1127,20 +1311,20 @@ APP_HTML = r"""<!doctype html>
     idxPill.textContent = "idx " + (idx+1) + " / " + activePreset.order.length;
 
     placeTitle.textContent = (phase === "undo")
-      ? ("UNDO " + prevPresetName.toUpperCase() + " â†’ then MAKE " + activePresetName.toUpperCase())
+      ? ("UNDO " + undoFromPreset.toUpperCase() + " → then MAKE " + activePresetName.toUpperCase())
       : ("MAKE " + activePresetName.toUpperCase());
 
-    placeSub.textContent = "Page 1 Â· Place cube in fixture (then go to execution page)";
+    placeSub.textContent = "Page 1 · Place cube in fixture (then go to execution page)";
 
     if(phase === "undo"){
-      if(!prevPresetName){
-        renderOrientation(null, "No previous preset stored.");
-        currentUndoInfo = { ok:false, message:"No previous preset", undo_moves:[], undo_serial:[], undo_orientation:null };
+      if(!undoFromPreset){
+        renderOrientation(null, "No undo selected.");
+        currentUndoInfo = { ok:false, message:"No undo selected", undo_moves:[], undo_serial:[], undo_orientation:null };
       }else{
         const res = await fetch("/api/undo_info", {
           method:"POST",
           headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify({ prev_preset: prevPresetName, pos: currentPos })
+          body: JSON.stringify({ prev_preset: undoFromPreset, pos: currentPos })
         });
         currentUndoInfo = await res.json();
         renderOrientation(currentUndoInfo.undo_orientation, "Place cube like it was placed when MAKING the previous preset (so UNDO works).");
@@ -1153,14 +1337,14 @@ APP_HTML = r"""<!doctype html>
     }else{
       renderOrientation(currentEntry.orientation, "Place cube to match this orientation for MAKE.");
       if(!currentEntry.orientation){
-        logAll("Note: no orientation for this entry (might be already-solved / placeholder).");
+        logAll("Note: no orientation for this entry (might be already-solved).");
       }
     }
   }
 
   function loadCubePage(){
     cubeTitle.textContent = "Cube " + currentPos;
-    cubeSub.textContent = "Page 2 Â· Send bytes to solver (you can send multiple times)";
+    cubeSub.textContent = "Page 2 · Send bytes to solver (you can send multiple times)";
     cubeModePill.textContent = "phase: " + phase.toUpperCase();
     cubePosPill.textContent = "cube " + currentPos;
     cubeIdxPill.textContent = "idx " + (idx+1) + " / " + activePreset.order.length;
@@ -1172,17 +1356,17 @@ APP_HTML = r"""<!doctype html>
 
     if(phase === "undo"){
       if(currentUndoInfo && currentUndoInfo.ok){
-        notes = ["UNDO of " + prevPresetName + " at cube " + currentPos].concat(notes || []);
+        notes = ["UNDO of " + undoFromPreset + " at cube " + currentPos].concat(notes || []);
         moves = currentUndoInfo.undo_moves || [];
         serial = currentUndoInfo.undo_serial || [];
       }else{
-        notes = ["UNDO not available for this cube. You may still use Insert/Eject, then press Next."] .concat(notes || []);
+        notes = ["UNDO not available for this cube. You may still use Insert/Eject, then press Next."].concat(notes || []);
         moves = [];
         serial = [];
       }
     }
 
-    notesBox.innerHTML = (notes && notes.length) ? notes.map(n => "â€¢ " + n).join("<br>") : "(none)";
+    notesBox.innerHTML = (notes && notes.length) ? notes.map(n => "• " + n).join("<br>") : "(none)";
     movesPre.textContent = (moves && moves.length) ? moves.join(" ") : "(none)";
     serialPre.textContent = (serial && serial.length) ? serial.join("\\n") : "(none)";
 
@@ -1230,33 +1414,24 @@ APP_HTML = r"""<!doctype html>
 
   async function nextStep(){
     if(phase === "undo"){
-      if(currentUndoInfo && currentUndoInfo.ok){
-        phase = "make";
-        await loadStep();
-        show(placeSection);
-        subTitle.textContent = "Page 1 Â· Place cube";
-        logAll("Switched to MAKE for the same cube " + currentPos);
-        return;
-      }else{
-        phase = "make";
-        await loadStep();
-        show(placeSection);
-        subTitle.textContent = "Page 1 Â· Place cube";
-        logAll("UNDO unavailable, continuing with MAKE for the same cube " + currentPos);
-        return;
-      }
+      phase = "make";
+      await loadStep();
+      show(placeSection);
+      subTitle.textContent = "Page 1 · Place cube";
+      logAll("Switched to MAKE for the same cube " + currentPos);
+      return;
     }
 
     if(idx < activePreset.order.length - 1){
       idx += 1;
-      phase = (prevPresetName && prevPresetName !== activePresetName) ? "undo" : "make";
+      phase = undoFromPreset ? "undo" : "make";
       await loadStep();
       show(placeSection);
-      subTitle.textContent = "Page 1 Â· Place cube";
+      subTitle.textContent = "Page 1 · Place cube";
       return;
     }
 
-    prevPresetName = activePresetName;
+    storedLastPresetName = activePresetName;
     localStorage.setItem("lastPresetName", activePresetName);
     logAll("Finished preset: " + activePresetName + ". Stored as lastPresetName.");
     setHomePills();
@@ -1280,19 +1455,19 @@ APP_HTML = r"""<!doctype html>
   runSolverBtn.addEventListener("click", () => {
     loadCubePage();
     show(cubeSection);
-    subTitle.textContent = "Page 2 Â· Cube execution";
+    subTitle.textContent = "Page 2 · Cube execution";
   });
 
   backToPlaceBtn.addEventListener("click", async () => {
     show(placeSection);
-    subTitle.textContent = "Page 1 Â· Place cube";
+    subTitle.textContent = "Page 1 · Place cube";
   });
 
   redoBtn.addEventListener("click", async () => {
     logAll("UI: Redo pressed. Reloading current step.");
     await loadStep();
     show(placeSection);
-    subTitle.textContent = "Page 1 Â· Place cube";
+    subTitle.textContent = "Page 1 · Place cube";
   });
 
   sendBtn.addEventListener("click", doSendCurrent);
@@ -1303,11 +1478,11 @@ APP_HTML = r"""<!doctype html>
       marioPreset = await fetchPreset("mario");
       duckPreset = await fetchPreset("duck");
 
-      renderPreview(marioPreview, "mario", marioPreset.preview_12x15);
-      renderPreview(duckPreview, "duck", duckPreset.preview_12x15);
+      renderPreview(marioPreview, marioPreset.preview_12x15);
+      renderPreview(duckPreview, duckPreset.preview_12x15);
 
       setHomePills();
-      logTo(globalLog, "Ready. Detected lastPresetName: " + (prevPresetName || "none"));
+      logTo(globalLog, "Ready. Detected lastPresetName: " + (storedLastPresetName || "none"));
     }catch(e){
       logTo(globalLog, "ERROR loading presets: " + e);
     }
@@ -1318,11 +1493,6 @@ APP_HTML = r"""<!doctype html>
 </body>
 </html>
 """
-
-
-# =========================================================
-# HTTP HANDLER
-# =========================================================
 
 class CubeHandler(BaseHTTPRequestHandler):
     def _set_headers(self, status=200, content_type="text/html; charset=utf-8"):
@@ -1401,10 +1571,6 @@ class CubeHandler(BaseHTTPRequestHandler):
         self._set_headers(404, "text/plain; charset=utf-8")
         self.wfile.write(b"Not found")
 
-
-# =========================================================
-# RUN SERVER
-# =========================================================
 
 def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:
     server = HTTPServer((host, port), CubeHandler)
