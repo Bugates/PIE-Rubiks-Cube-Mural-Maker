@@ -103,7 +103,6 @@
   wrap.appendChild(cube);
   mount.appendChild(wrap);
 
-  /* run animation */
   requestAnimationFrame(()=>{
     cube.classList.add("spin");
   });
