@@ -1,14 +1,9 @@
 #!/usr/bin/env python3
-import gc
-gc.disable()
-
 import json
 import socket
 import time
 import glob
-import sys
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 try:
@@ -23,6 +18,10 @@ try:
 except ImportError:
     HAS_SERIAL = False
 
+
+# =========================================================
+# NETWORK HELPERS
+# =========================================================
 
 def get_local_ip() -> str:
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -49,402 +48,9 @@ def print_qr(url: str) -> None:
         print("(Install 'qrcode' Python package to see ASCII QR code.)")
 
 
-U, R, F, D, L, B = range(6)
-
-COLOR_TO_INT = {'r': 0, 'o': 1, 'b': 2, 'g': 3, 'w': 4, 'y': 5}
-INT_TO_COLOR = ['r', 'o', 'b', 'g', 'w', 'y']
-
-
-@dataclass(frozen=True)
-class Sticker:
-    x: int
-    y: int
-    z: int
-    nx: int
-    ny: int
-    nz: int
-
-
-sticker_to_index: Dict[Sticker, int] = {}
-index_to_sticker: Dict[int, Sticker] = {}
-
-
-def add_face(face: int, coord_func, normal: Tuple[int, int, int]) -> None:
-    for pos in range(9):
-        r, c = divmod(pos, 3)
-        x, y, z = coord_func(r, c)
-        nx, ny, nz = normal
-        st = Sticker(x, y, z, nx, ny, nz)
-        idx = face * 9 + pos
-        if st in sticker_to_index:
-            raise ValueError("Duplicate sticker mapping")
-        sticker_to_index[st] = idx
-        index_to_sticker[idx] = st
-
-
-def coord_U(r, c):
-    return -1 + c, 1, -1 + r
-
-
-def coord_D(r, c):
-    return -1 + c, -1, 1 - r
-
-
-def coord_F(r, c):
-    return -1 + c, 1 - r, 1
-
-
-def coord_B(r, c):
-    return 1 - c, 1 - r, -1
-
-
-def coord_R(r, c):
-    return 1, 1 - r, 1 - c
-
-
-def coord_L(r, c):
-    return -1, 1 - r, -1 + c
-
-
-add_face(U, coord_U, (0, 1, 0))
-add_face(D, coord_D, (0, -1, 0))
-add_face(F, coord_F, (0, 0, 1))
-add_face(B, coord_B, (0, 0, -1))
-add_face(R, coord_R, (1, 0, 0))
-add_face(L, coord_L, (-1, 0, 0))
-
-
-def rot_z_cw(x, y, z):
-    return y, -x, z
-
-
-def rot_z_ccw(x, y, z):
-    return -y, x, z
-
-
-def rot_x_cw(x, y, z):
-    return x, z, -y
-
-
-def rot_x_ccw(x, y, z):
-    return x, -z, y
-
-
-def rot_y_cw(x, y, z):
-    return z, y, -x
-
-
-def rot_y_ccw(x, y, z):
-    return -z, y, x
-
-
-def make_perm(layer_cond, rot_func) -> Tuple[int, ...]:
-    perm = list(range(54))
-    for idx, st in index_to_sticker.items():
-        if layer_cond(st):
-            x2, y2, z2 = rot_func(st.x, st.y, st.z)
-            nx2, ny2, nz2 = rot_func(st.nx, st.ny, st.nz)
-            st2 = Sticker(x2, y2, z2, nx2, ny2, nz2)
-            j = sticker_to_index[st2]
-            perm[idx] = j
-    return tuple(perm)
-
-
-def invert_perm(p: Tuple[int, ...]) -> Tuple[int, ...]:
-    q = [0] * len(p)
-    for i, j in enumerate(p):
-        q[j] = i
-    return tuple(q)
-
-
-perm_F_cw = make_perm(lambda st: st.z == 1, rot_z_cw)
-perm_B_cw = make_perm(lambda st: st.z == -1, rot_z_ccw)
-perm_R_cw = make_perm(lambda st: st.x == 1, rot_x_cw)
-perm_L_cw = make_perm(lambda st: st.x == -1, rot_x_ccw)
-perm_D_cw = make_perm(lambda st: st.y == -1, rot_y_ccw)
-
-perm_F_ccw = invert_perm(perm_F_cw)
-perm_B_ccw = invert_perm(perm_B_cw)
-perm_R_ccw = invert_perm(perm_R_cw)
-perm_L_ccw = invert_perm(perm_L_cw)
-perm_D_ccw = invert_perm(perm_D_cw)
-
-
-MOVE_PERMS: Dict[str, Tuple[int, ...]] = {
-    'F': perm_F_cw,
-    "F'": perm_F_ccw,
-    'B': perm_B_cw,
-    "B'": perm_B_ccw,
-    'R': perm_R_cw,
-    "R'": perm_R_ccw,
-    'L': perm_L_cw,
-    "L'": perm_L_ccw,
-    'D': perm_D_cw,
-    "D'": perm_D_ccw,
-}
-
-INV_MOVE: Dict[str, str] = {
-    'F': "F'", "F'": 'F',
-    'B': "B'", "B'": 'B',
-    'R': "R'", "R'": 'R',
-    'L': "L'", "L'": 'L',
-    'D': "D'", "D'": 'D',
-}
-
-U_FACE_IDX = tuple(U * 9 + i for i in range(9))
-
-
-def apply_perm_int(state: Tuple[int, ...], perm: Tuple[int, ...]) -> Tuple[int, ...]:
-    # new_state[i] = state[perm[i]]
-    return tuple(state[perm[i]] for i in range(54))
-
-
-ORIENTATIONS: List[Dict[str, str]] = [
-    {'B': 'b', 'D': 'y', 'F': 'g', 'L': 'o', 'R': 'r', 'U': 'w'},
-    {'B': 'g', 'D': 'w', 'F': 'b', 'L': 'o', 'R': 'r', 'U': 'y'},
-    {'B': 'g', 'D': 'y', 'F': 'b', 'L': 'r', 'R': 'o', 'U': 'w'},
-    {'B': 'b', 'D': 'w', 'F': 'g', 'L': 'r', 'R': 'o', 'U': 'y'},
-    {'B': 'w', 'D': 'b', 'F': 'y', 'L': 'o', 'R': 'r', 'U': 'g'},
-    {'B': 'y', 'D': 'g', 'F': 'w', 'L': 'o', 'R': 'r', 'U': 'b'},
-    {'B': 'y', 'D': 'b', 'F': 'w', 'L': 'r', 'R': 'o', 'U': 'g'},
-    {'B': 'w', 'D': 'g', 'F': 'y', 'L': 'r', 'R': 'o', 'U': 'b'},
-    {'B': 'g', 'D': 'o', 'F': 'b', 'L': 'y', 'R': 'w', 'U': 'r'},
-    {'B': 'b', 'D': 'r', 'F': 'g', 'L': 'y', 'R': 'w', 'U': 'o'},
-    {'B': 'b', 'D': 'o', 'F': 'g', 'L': 'w', 'R': 'y', 'U': 'r'},
-    {'B': 'g', 'D': 'r', 'F': 'b', 'L': 'w', 'R': 'y', 'U': 'o'},
-    {'B': 'o', 'D': 'b', 'F': 'r', 'L': 'y', 'R': 'w', 'U': 'g'},
-    {'B': 'r', 'D': 'g', 'F': 'o', 'L': 'y', 'R': 'w', 'U': 'b'},
-    {'B': 'r', 'D': 'b', 'F': 'o', 'L': 'w', 'R': 'y', 'U': 'g'},
-    {'B': 'o', 'D': 'g', 'F': 'r', 'L': 'w', 'R': 'y', 'U': 'b'},
-    {'B': 'y', 'D': 'o', 'F': 'w', 'L': 'b', 'R': 'g', 'U': 'r'},
-    {'B': 'w', 'D': 'r', 'F': 'y', 'L': 'b', 'R': 'g', 'U': 'o'},
-    {'B': 'w', 'D': 'o', 'F': 'y', 'L': 'g', 'R': 'b', 'U': 'r'},
-    {'B': 'y', 'D': 'r', 'F': 'w', 'L': 'g', 'R': 'b', 'U': 'o'},
-    {'B': 'r', 'D': 'y', 'F': 'o', 'L': 'b', 'R': 'g', 'U': 'w'},
-    {'B': 'o', 'D': 'w', 'F': 'r', 'L': 'b', 'R': 'g', 'U': 'y'},
-    {'B': 'o', 'D': 'y', 'F': 'r', 'L': 'g', 'R': 'b', 'U': 'w'},
-    {'B': 'r', 'D': 'w', 'F': 'o', 'L': 'g', 'R': 'b', 'U': 'y'},
-]
-
-
-def build_state_for_orientation_int(ori: Dict[str, str]) -> Tuple[int, ...]:
-    colors_by_face = {
-        U: COLOR_TO_INT[ori['U']],
-        R: COLOR_TO_INT[ori['R']],
-        F: COLOR_TO_INT[ori['F']],
-        D: COLOR_TO_INT[ori['D']],
-        L: COLOR_TO_INT[ori['L']],
-        B: COLOR_TO_INT[ori['B']],
-    }
-    s: List[int] = []
-    for face in range(6):
-        s.extend([colors_by_face[face]] * 9)
-    return tuple(s)
-
-
-def up_matches_int(state: Tuple[int, ...], target_up: Tuple[int, ...]) -> bool:
-    # target_up is 9-length, row-major
-    uidx = U_FACE_IDX
-    return (
-        state[uidx[0]] == target_up[0] and
-        state[uidx[1]] == target_up[1] and
-        state[uidx[2]] == target_up[2] and
-        state[uidx[3]] == target_up[3] and
-        state[uidx[4]] == target_up[4] and
-        state[uidx[5]] == target_up[5] and
-        state[uidx[6]] == target_up[6] and
-        state[uidx[7]] == target_up[7] and
-        state[uidx[8]] == target_up[8]
-    )
-
-
-ALLOWED_MOVES = ['F', "F'", 'B', "B'", 'R', "R'", 'L', "L'", 'D', "D'"]
-MAX_DEPTH_DEFAULT = 40
-
-# Precompute move arrays for faster DFS
-MOVE_LIST = tuple(ALLOWED_MOVES)
-MOVE_FACE = tuple(m[0] for m in MOVE_LIST)
-INV_IDX = tuple(MOVE_LIST.index(INV_MOVE[m]) for m in MOVE_LIST)
-MOVE_PERM_LIST = tuple(MOVE_PERMS[m] for m in MOVE_LIST)
-
-
-def solve_u_mural(
-    target_face: List[List[str]],
-    max_depth: int = MAX_DEPTH_DEFAULT
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]], int]:
-
-    center_color = target_face[1][1]
-    if center_color not in COLOR_TO_INT:
-        return None, None, max_depth
-
-    target_up = (
-        COLOR_TO_INT[target_face[0][0]], COLOR_TO_INT[target_face[0][1]], COLOR_TO_INT[target_face[0][2]],
-        COLOR_TO_INT[target_face[1][0]], COLOR_TO_INT[target_face[1][1]], COLOR_TO_INT[target_face[1][2]],
-        COLOR_TO_INT[target_face[2][0]], COLOR_TO_INT[target_face[2][1]], COLOR_TO_INT[target_face[2][2]],
-    )
-
-    best_moves: Optional[List[str]] = None
-    best_ori: Optional[Dict[str, str]] = None
-
-    # Local bind hot stuff
-    _build = build_state_for_orientation_int
-    _upmatch = up_matches_int
-    _apply = apply_perm_int
-    _move_perms = MOVE_PERM_LIST
-    _inv_idx = INV_IDX
-    _mface = MOVE_FACE
-    _mlist = MOVE_LIST
-
-    candidates = [o for o in ORIENTATIONS if o['U'] == center_color]
-    if not candidates:
-        return None, None, max_depth
-
-    for ori in candidates:
-        init_state = _build(ori)
-
-        if _upmatch(init_state, target_up):
-            if best_moves is None or len(best_moves) > 0:
-                best_moves = []
-                best_ori = ori
-            continue
-
-        # visited: (state, depth_remaining, last_move_idx) -> True
-        visited = set()
-
-        def dfs(state: Tuple[int, ...], depth: int, last_idx: int) -> Optional[List[int]]:
-            key = (state, depth, last_idx)
-            if key in visited:
-                return None
-            visited.add(key)
-
-            if depth == 0:
-                return None
-
-            for mi in range(len(_mlist)):
-                if last_idx != -1:
-                    if _inv_idx[last_idx] == mi:
-                        continue
-                    if _mface[last_idx] == _mface[mi]:
-                        continue
-
-                ns = _apply(state, _move_perms[mi])
-
-                if _upmatch(ns, target_up):
-                    return [mi]
-
-                if depth > 1:
-                    res = dfs(ns, depth - 1, mi)
-                    if res is not None:
-                        return [mi] + res
-
-            return None
-
-        for d in range(1, max_depth + 1):
-            visited.clear()
-            res_idx = dfs(init_state, d, -1)
-            if res_idx is not None:
-                res_moves = [MOVE_LIST[i] for i in res_idx]
-                if best_moves is None or len(res_moves) < len(best_moves):
-                    best_moves = res_moves
-                    best_ori = ori
-                break
-
-    return best_moves, best_ori, max_depth
-
-
-def moves_to_serial(moves: List[str]) -> List[int]:
-    cmd_map = {
-        "RF": 121,
-        "RB": 122,
-        "LF": 141,
-        "LB": 142,
-        "BF": 131,
-        "BB": 132,
-        "FF": 111,
-        "FB": 112,
-        "DF": 211,
-        "DB": 212,
-    }
-
-    cmds: List[int] = []
-    for m in moves:
-        face = m[0]
-        clockwise = (len(m) == 1)
-
-        if face == 'D':
-            direction = 'F' if clockwise else 'B'
-        else:
-            direction = 'B' if clockwise else 'F'
-
-        key = f"{face}{direction}"
-        if key not in cmd_map:
-            raise ValueError(f"Unknown robot command mapping for move '{m}' -> '{key}'")
-
-        cmds.append(cmd_map[key])
-
-    return cmds
-
-
-def compute_solution(grid: List[List[str]]) -> Dict[str, object]:
-    if len(grid) != 3 or any(len(row) != 3 for row in grid):
-        return {
-            "moves": [],
-            "serial": [],
-            "orientation": None,
-            "elapsed": 0.0,
-            "message": "Grid must be 3×3.",
-        }
-
-    face = [[str(c).lower() for c in row] for row in grid]
-    valid = {'r', 'o', 'b', 'g', 'w', 'y'}
-    for r in range(3):
-        for c in range(3):
-            if face[r][c] not in valid:
-                return {
-                    "moves": [],
-                    "serial": [],
-                    "orientation": None,
-                    "elapsed": 0.0,
-                    "message": (
-                        f"Invalid color '{face[r][c]}' at ({r+1},{c+1}). "
-                        "Use r/o/b/g/w/y."
-                    ),
-                }
-
-    msg_prefix = (
-        "Solving U (top) face from a solved cube whose Up center color "
-        "matches your pattern. Shorter sequences are preferred; "
-        "search depth is limited.\n"
-    )
-
-    t0 = time.time()
-    moves, ori_used, depth_limit = solve_u_mural(face, max_depth=MAX_DEPTH_DEFAULT)
-    elapsed = time.time() - t0
-
-    if moves is None or ori_used is None:
-        return {
-            "moves": [],
-            "serial": [],
-            "orientation": None,
-            "elapsed": elapsed,
-            "message": (
-                msg_prefix
-                + "Pattern is NOT solvable from a real solved cube using R/L/F/B/D moves "
-                  "within the current search depth. It is treated as ILLEGAL. "
-                  f"(Search depth limit = {depth_limit}.)"
-            ),
-        }
-
-    serial_cmds = moves_to_serial(moves)
-
-    return {
-        "moves": moves,
-        "serial": serial_cmds,
-        "orientation": ori_used,
-        "elapsed": elapsed,
-        "message": msg_prefix + f"Found solution with {len(moves)} moves.",
-    }
-
+# =========================================================
+# SERIAL HELPERS (BYTES ONLY, WAIT FOR DONE)
+# =========================================================
 
 def find_ports() -> List[str]:
     return glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
@@ -542,7 +148,7 @@ def run_serial_commands(commands: List[object]) -> Dict[str, object]:
                 log.append(f"Skipping non-numeric command: {cmd_raw!r}")
                 continue
             if not (0 <= cmd <= 255):
-                raise ValueError(f"Command {cmd} out of byte range")
+                raise ValueError(f"Command {cmd} out of byte range (0-255)")
 
             data = bytes([cmd])
 
@@ -567,7 +173,7 @@ def run_serial_commands(commands: List[object]) -> Dict[str, object]:
         print("\nAll commands completed.")
 
         t0 = time.time()
-        while time.time() - t0 < 2:
+        while time.time() - t0 < 1.5:
             for s in serials:
                 msgs = read_all_available(s)
                 for m in msgs:
@@ -593,1066 +199,1130 @@ def run_serial_commands(commands: List[object]) -> Dict[str, object]:
         print("Finished.")
 
 
-def run_manual_motor_command(cmd_raw: object) -> Dict[str, object]:
-    log: List[str] = []
+# =========================================================
+# MOVE / UNDO HELPERS
+# =========================================================
 
-    if not HAS_SERIAL:
-        err = "pyserial is not installed on this system."
-        log.append(err)
-        return {"ok": False, "log": log, "error": err}
+INV_MOVE: Dict[str, str] = {
+    'F': "F'", "F'": 'F',
+    'B': "B'", "B'": 'B',
+    'R': "R'", "R'": 'R',
+    'L': "L'", "L'": 'L',
+    'D': "D'", "D'": 'D',
+}
 
-    cmd = _coerce_cmd_to_int(cmd_raw)
-    if cmd is None:
-        err = f"Manual command must be an integer. Got: {cmd_raw!r}"
-        log.append(err)
-        return {"ok": False, "log": log, "error": err}
+def moves_to_serial(moves: List[str]) -> List[int]:
+    cmd_map = {
+        "RF": 121,
+        "RB": 122,
+        "LF": 141,
+        "LB": 142,
+        "BF": 131,
+        "BB": 132,
+        "FF": 111,
+        "FB": 112,
+        "DF": 211,
+        "DB": 212,
+    }
 
-    ports = find_ports()
-    if not ports:
-        err = "No Arduino ports found."
-        log.append(err)
-        return {"ok": False, "log": log, "error": err}
+    cmds: List[int] = []
+    for m in moves:
+        face = m[0]
+        clockwise = (len(m) == 1)
 
-    log.append("Found ports: " + ", ".join(ports))
-    print("Found ports:", ports)
-
-    serials = []
-    for port in ports:
-        try:
-            s = serial.Serial(port, 9600, timeout=1)
-            time.sleep(2)
-            serials.append(s)
-            log.append(f"Opened {port}")
-            print(f"Opened {port}")
-        except Exception as e:
-            msg = f"Could not open {port}: {e}"
-            log.append(msg)
-            print(msg)
-
-    if not serials:
-        err = "No serial connections opened."
-        log.append(err)
-        return {"ok": False, "log": log, "error": err}
-
-    try:
-        for s in serials:
-            try:
-                msgs = read_all_available(s)
-                for m in msgs:
-                    line = f"{s.port}: {m}"
-                    log.append(line)
-                    print("   ", line)
-            except Exception:
-                pass
-
-        if 0 <= cmd <= 255:
-            payload_desc = f"byte:{cmd}"
-            data = bytes([cmd])
+        if face == 'D':
+            direction = 'F' if clockwise else 'B'
         else:
-            payload_desc = f"ascii:{cmd}"
-            data = (str(cmd) + "\n").encode("utf-8")
+            direction = 'B' if clockwise else 'F'
 
-        for s in serials:
-            s.write(data)
+        key = f"{face}{direction}"
+        if key not in cmd_map:
+            raise ValueError(f"Unknown robot command mapping for move '{m}' -> '{key}'")
 
-        log.append(f"Sent manual command ({payload_desc})")
-        print("\nSent manual command:", cmd, f"({payload_desc})")
+        cmds.append(cmd_map[key])
 
-        t0 = time.time()
-        while time.time() - t0 < 0.8:
-            for s in serials:
-                msgs = read_all_available(s)
-                for m in msgs:
-                    line = f"{s.port}: {m}"
-                    log.append(line)
-                    print("   ", line)
-            time.sleep(0.05)
-
-        return {"ok": True, "log": log, "error": ""}
-
-    except Exception as e:
-        err = f"Error while sending manual command: {e}"
-        log.append(err)
-        print(err)
-        return {"ok": False, "log": log, "error": err}
-    finally:
-        for s in serials:
-            try:
-                s.close()
-            except Exception:
-                pass
-        log.append("Serial connections closed.")
-        print("Serial connections closed.")
-        print("Finished.")
+    return cmds
 
 
-HTML_PAGE = r"""<!doctype html>
+def invert_moves(moves: List[str]) -> List[str]:
+    inv = []
+    for m in reversed(moves):
+        inv.append(INV_MOVE.get(m, m))
+    return inv
+
+
+def key_rc(r: int, c: int) -> str:
+    return f"{r},{c}"
+
+
+# =========================================================
+# INSERT / EJECT BYTE MACROS (ALWAYS AVAILABLE IN UI)
+# =========================================================
+
+INSERT_BOTTOM = [241]
+INSERT_SIDES  = [222, 231, 222, 231]
+
+EJECT_SIDES   = [221, 232, 221, 232]
+EJECT_BOTTOM  = [242]
+
+
+# =========================================================
+# PRESET DATA (YOUR 5x4 = 20 CUBES)
+# order is 1,1 -> 1,4 then 2,1 -> 2,4 ... 5,4
+# =========================================================
+
+def make_order(rows: int, cols: int) -> List[str]:
+    return [key_rc(r, c) for r in range(1, rows + 1) for c in range(1, cols + 1)]
+
+
+def preview_12x15_from_strings(lines: List[str]) -> List[str]:
+    out = []
+    for ln in lines[:12]:
+        ln = (ln[:15]).ljust(15, ".")
+        out.append(ln)
+    while len(out) < 12:
+        out.append("." * 15)
+    return out
+
+
+PRESETS: Dict[str, Dict[str, object]] = {
+    "mario": {
+        "title": "Mario",
+        "rows": 5,
+        "cols": 4,
+        "order": make_order(5, 4),
+        "preview_12x15": preview_12x15_from_strings([
+            ".....MMMMM.....",
+            "....MMMMMMM....",
+            "...MM..M..MM...",
+            "..MMM.MMM.MMM..",
+            "..MM..MMM..MM..",
+            "..MMMMMMMMMMM..",
+            "..MM.MMMMM.MM..",
+            "..MM..MMM..MM..",
+            "...MM.....MM...",
+            "....MMMMMMM....",
+            ".....MMMMM.....",
+            "...............",
+        ]),
+        "cubes": {
+            "1,1": {
+                "moves": ['R', 'F', "R'", "F'"],
+                "serial": [122, 112, 121, 111],
+                "orientation": {'U': 'w', 'D': 'y', 'F': 'r', 'B': 'o', 'R': 'b', 'L': 'g'},
+                "notes": []
+            },
+            "1,2": {
+                "moves": ['F', "D'", 'F'],
+                "serial": [112, 212, 112],
+                "orientation": {'U': 'r', 'D': 'o', 'F': 'w', 'B': 'y', 'R': 'g', 'L': 'b'},
+                "notes": []
+            },
+            "1,3": {
+                "moves": ['D', "F'", 'D', "R'", 'F', "D'", 'R'],
+                "serial": [211, 111, 211, 121, 112, 212, 122],
+                "orientation": {'U': 'r', 'D': 'o', 'F': 'b', 'B': 'g', 'R': 'w', 'L': 'y'},
+                "notes": []
+            },
+            "1,4": {
+                "moves": ['D', 'F', "B'", 'R'],
+                "serial": [211, 112, 131, 122],
+                "orientation": {'U': 'r', 'D': 'o', 'F': 'b', 'B': 'g', 'R': 'w', 'L': 'y'},
+                "notes": []
+            },
+            "2,1": {
+                "moves": ['R', "D'", 'L', "F'"],
+                "serial": [122, 212, 142, 111],
+                "orientation": {'U': 'o', 'D': 'r', 'F': 'w', 'B': 'y', 'R': 'b', 'L': 'g'},
+                "notes": []
+            },
+            "2,2": {
+                "moves": ["L'", 'D', "B'", 'L', 'F', 'R'],
+                "serial": [141, 211, 131, 142, 112, 122],
+                "orientation": {'U': 'o', 'D': 'r', 'F': 'b', 'B': 'g', 'R': 'y', 'L': 'w'},
+                "notes": []
+            },
+            "2,3": {
+                "moves": ['B', "D'", "B'", "L'"],
+                "serial": [132, 212, 131, 141],
+                "orientation": {'U': 'b', 'D': 'g', 'F': 'w', 'B': 'y', 'R': 'r', 'L': 'o'},
+                "notes": ["Center exchange: Blue up change center to white"]
+            },
+            "2,4": {
+                "moves": ["R'", 'D', 'F', 'D', 'R', 'F'],
+                "serial": [121, 211, 112, 211, 122, 112],
+                "orientation": {'U': 'y', 'D': 'w', 'F': 'o', 'B': 'r', 'R': 'b', 'L': 'g'},
+                "notes": []
+            },
+            "3,1": {
+                "moves": ["D'", "B'", 'R', 'B', "D'", "F'"],
+                "serial": [212, 131, 122, 132, 212, 111],
+                "orientation": {'U': 'w', 'D': 'y', 'F': 'b', 'B': 'g', 'R': 'o', 'L': 'r'},
+                "notes": []
+            },
+            "3,2": {
+                "moves": ['R', "L'", 'B'],
+                "serial": [122, 141, 132],
+                "orientation": {'U': 'b', 'D': 'g', 'F': 'o', 'B': 'r', 'R': 'w', 'L': 'y'},
+                "notes": []
+            },
+            "3,3": {
+                "moves": ['R', "L'", 'B'],
+                "serial": [122, 141, 132],
+                "orientation": {'U': 'b', 'D': 'g', 'F': 'o', 'B': 'r', 'R': 'w', 'L': 'y'},
+                "notes": []
+            },
+            "3,4": {
+                "moves": ['D', 'B', "L'", "B'", 'D', 'F'],
+                "serial": [211, 132, 141, 131, 211, 112],
+                "orientation": {'U': 'w', 'D': 'y', 'F': 'g', 'B': 'b', 'R': 'r', 'L': 'o'},
+                "notes": []
+            },
+            "4,1": {
+                "moves": ['B', 'R', "F'", 'R', 'F', 'B'],
+                "serial": [132, 122, 111, 122, 112, 132],
+                "orientation": {'U': 'o', 'D': 'r', 'F': 'g', 'B': 'b', 'R': 'w', 'L': 'y'},
+                "notes": []
+            },
+            "4,2": {
+                "moves": ['L', 'D', "L'"],
+                "serial": [142, 211, 141],
+                "orientation": {'U': 'b', 'D': 'g', 'F': 'w', 'B': 'y', 'R': 'r', 'L': 'o'},
+                "notes": ["Center exchange: Blue up make center orange"]
+            },
+            "4,3": {
+                "moves": ["R'", 'D', 'R'],
+                "serial": [121, 211, 122],
+                "orientation": {'U': 'b', 'D': 'g', 'F': 'w', 'B': 'y', 'R': 'r', 'L': 'o'},
+                "notes": ["Center exchange: Blue up make center orange"]
+            },
+            "4,4": {
+                "moves": ['B', "L'", "B'", 'L', 'B', "L'"],
+                "serial": [132, 141, 131, 142, 132, 141],
+                "orientation": {'U': 'o', 'D': 'r', 'F': 'g', 'B': 'b', 'R': 'w', 'L': 'y'},
+                "notes": []
+            },
+            "5,1": {
+                "moves": ['B', 'R', "D'", "F'"],
+                "serial": [132, 122, 212, 111],
+                "orientation": {'U': 'w', 'D': 'y', 'F': 'g', 'B': 'b', 'R': 'r', 'L': 'o'},
+                "notes": []
+            },
+            "5,2": {
+                "moves": ["F'", 'D', 'R', 'D', 'R', 'F'],
+                "serial": [111, 211, 122, 211, 122, 112],
+                "orientation": {'U': 'b', 'D': 'g', 'F': 'o', 'B': 'r', 'R': 'w', 'L': 'y'},
+                "notes": []
+            },
+            "5,3": {
+                "moves": ['D', 'F', 'B', "L'", "B'"],
+                "serial": [211, 112, 132, 141, 131],
+                "orientation": {'U': 'b', 'D': 'g', 'F': 'o', 'B': 'r', 'R': 'w', 'L': 'y'},
+                "notes": []
+            },
+            "5,4": {
+                "moves": ["B'", 'L', 'F'],
+                "serial": [131, 142, 112],
+                "orientation": {'U': 'w', 'D': 'y', 'F': 'b', 'B': 'g', 'R': 'o', 'L': 'r'},
+                "notes": []
+            },
+        }
+    },
+
+    "duck": {
+        "title": "Duck",
+        "rows": 5,
+        "cols": 4,
+        "order": make_order(5, 4),
+        "preview_12x15": preview_12x15_from_strings([
+            "...............",
+            "......DD.......",
+            "....DDDDDD.....",
+            "...DDDDDDDD....",
+            "..DDDDDDDDDD...",
+            "..DDDDDDDDDD...",
+            "...DDDDDDDDD...",
+            "....DDDDDD.....",
+            ".....DDDD......",
+            "......DD.......",
+            "...............",
+            "...............",
+        ]),
+        "cubes": {
+            "1,1": {
+                "moves": ['R', 'D', "R'"],
+                "serial": [122, 211, 121],
+                "orientation": {'U': 'w', 'D': 'y', 'F': 'g', 'B': 'b', 'R': 'r', 'L': 'o'},
+                "notes": []
+            },
+            "1,2": {
+                "moves": ["R'", 'L', "F'", 'R', "L'"],
+                "serial": [121, 142, 111, 122, 141],
+                "orientation": {'U': 'y', 'D': 'w', 'F': 'r', 'B': 'o', 'R': 'g', 'L': 'b'},
+                "notes": []
+            },
+            "1,3": {
+                "moves": ['R', "B'", "R'", 'B', 'R', "B'"],
+                "serial": [122, 131, 121, 132, 122, 131],
+                "orientation": {'U': 'y', 'D': 'w', 'F': 'b', 'B': 'g', 'R': 'r', 'L': 'o'},
+                "notes": []
+            },
+            "1,4": {
+                "moves": [],
+                "serial": [],
+                "orientation": None,
+                "notes": ["Already solved / stack: white side up (WWW/WWW/WWW)"]
+            },
+            "2,1": {
+                "moves": ['L', 'B', "R'", 'B', 'R', 'L'],
+                "serial": [142, 132, 121, 132, 122, 142],
+                "orientation": {'U': 'y', 'D': 'w', 'F': 'b', 'B': 'g', 'R': 'r', 'L': 'o'},
+                "notes": []
+            },
+            "2,2": {
+                "moves": ["F'", 'B', "L'", 'F', "B'"],
+                "serial": [111, 132, 141, 112, 131],
+                "orientation": {'U': 'y', 'D': 'w', 'F': 'r', 'B': 'o', 'R': 'g', 'L': 'b'},
+                "notes": []
+            },
+            "2,3": {
+                "moves": ["B'", 'L', 'D', 'L', 'D', "B'"],
+                "serial": [131, 142, 211, 142, 211, 131],
+                "orientation": {'U': 'w', 'D': 'y', 'F': 'g', 'B': 'b', 'R': 'r', 'L': 'o'},
+                "notes": []
+            },
+            "2,4": {
+                "moves": ["F'", "R'", 'F', 'R', "D'", 'F'],
+                "serial": [111, 121, 112, 122, 212, 112],
+                "orientation": {'U': 'w', 'D': 'y', 'F': 'g', 'B': 'b', 'R': 'r', 'L': 'o'},
+                "notes": []
+            },
+            "3,1": {
+                "moves": [],
+                "serial": [],
+                "orientation": None,
+                "notes": ["No data for this cube yet (placeholder)."]
+            },
+            "3,2": {
+                "moves": ['R', 'D', "R'"],
+                "serial": [122, 211, 121],
+                "orientation": {'U': 'y', 'D': 'w', 'F': 'b', 'B': 'g', 'R': 'r', 'L': 'o'},
+                "notes": ["Center exchange: Orange center switch"]
+            },
+            "3,3": {
+                "moves": [],
+                "serial": [],
+                "orientation": None,
+                "notes": ["No data for this cube yet (placeholder)."]
+            },
+            "3,4": {
+                "moves": [],
+                "serial": [],
+                "orientation": None,
+                "notes": ["No data for this cube yet (placeholder)."]
+            },
+            "4,1": {
+                "moves": [],
+                "serial": [],
+                "orientation": None,
+                "notes": ["No data for this cube yet (placeholder)."]
+            },
+            "4,2": {
+                "moves": [],
+                "serial": [],
+                "orientation": None,
+                "notes": ["Already solved / stack: yellow side up (YYY/YYY/YYY)"]
+            },
+            "4,3": {
+                "moves": [],
+                "serial": [],
+                "orientation": None,
+                "notes": ["No data for this cube yet (placeholder)."]
+            },
+            "4,4": {
+                "moves": [],
+                "serial": [],
+                "orientation": None,
+                "notes": ["No data for this cube yet (placeholder)."]
+            },
+            "5,1": {
+                "moves": [],
+                "serial": [],
+                "orientation": None,
+                "notes": ["Already solved / stack: blue side up (BBB/BBB/BBB)"]
+            },
+            "5,2": {
+                "moves": [],
+                "serial": [],
+                "orientation": None,
+                "notes": ["Already solved / stack: blue side up (BBB/BBB/BBB)"]
+            },
+            "5,3": {
+                "moves": [],
+                "serial": [],
+                "orientation": None,
+                "notes": ["Already solved / stack: blue side up (BBB/BBB/BBB)"]
+            },
+            "5,4": {
+                "moves": [],
+                "serial": [],
+                "orientation": None,
+                "notes": ["Already solved / stack: blue side up (BBB/BBB/BBB)"]
+            },
+        }
+    }
+}
+
+
+def get_cube_entry(preset_name: str, pos_key: str) -> Dict[str, object]:
+    p = PRESETS.get(preset_name, {})
+    cubes = p.get("cubes", {})
+    entry = cubes.get(pos_key)
+    if entry is None:
+        return {
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["No data for this cube yet (placeholder)."]
+        }
+    return entry
+
+
+def build_preset_payload(name: str) -> Dict[str, object]:
+    p = PRESETS[name]
+    out = {
+        "name": name,
+        "title": p.get("title", name),
+        "rows": p.get("rows", 5),
+        "cols": p.get("cols", 4),
+        "order": p.get("order", []),
+        "preview_12x15": p.get("preview_12x15", ["." * 15] * 12),
+        "cubes": {},
+    }
+    for k in out["order"]:
+        out["cubes"][k] = get_cube_entry(name, k)
+    return out
+
+
+def compute_undo_for_cube(prev_preset: str, pos_key: str) -> Dict[str, object]:
+    e = get_cube_entry(prev_preset, pos_key)
+    moves = e.get("moves") or []
+    ori = e.get("orientation", None)
+    if not moves:
+        return {
+            "ok": False,
+            "message": "No undo available (this cube has no recorded moves).",
+            "undo_moves": [],
+            "undo_serial": [],
+            "undo_orientation": ori,
+        }
+    undo_moves = invert_moves(moves)
+    undo_serial = moves_to_serial(undo_moves) if undo_moves else []
+    return {
+        "ok": True,
+        "message": "Undo is available (inverse of previous preset moves).",
+        "undo_moves": undo_moves,
+        "undo_serial": undo_serial,
+        "undo_orientation": ori,
+    }
+
+
+# =========================================================
+# SINGLE-PAGE UI (HOME + ORIENTATION PAGE + CUBE PAGE)
+# - No draw tab
+# - No algorithm
+# - Presets only
+# - Insert/Eject available everywhere
+# - Undo flow supported when switching presets (localStorage lastPresetName)
+# =========================================================
+
+APP_HTML = r"""<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Cube U-Face Mural Solver</title>
+  <title>Rubik’s Cube Mural Presets</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    :root {
-      --bg: #f3f4f6;
-      --card-bg: #ffffff;
-      --border: #d1d5db;
-      --text: #111827;
-      --muted: #6b7280;
-      --accent: #2563eb;
-      --error: #b91c1c;
+    :root{
+      --bg:#f3f4f6; --card:#fff; --border:#d1d5db; --text:#111827; --muted:#6b7280;
+      --accent:#2563eb; --danger:#ef4444; --ok:#059669; --warn:#b45309;
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg);
-      color: var(--text);
+    *{ box-sizing:border-box }
+    body{ margin:0; font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--text); }
+    .shell{ max-width:1100px; margin:0 auto; padding:16px; }
+    .topbar{
+      position:sticky; top:0; z-index:30;
+      background:rgba(243,244,246,0.92); backdrop-filter:saturate(180%) blur(8px);
+      border-bottom:1px solid rgba(209,213,219,0.8);
+      padding:10px 0; margin-bottom:14px;
     }
-    .shell {
-      max-width: 780px;
-      margin: 0 auto;
-      padding: 16px;
+    .topbar-inner{ max-width:1100px; margin:0 auto; padding:0 16px; display:flex; gap:12px; align-items:center; justify-content:space-between; }
+    .title{ font-weight:800; letter-spacing:-0.02em; }
+    .muted{ color:var(--muted); font-size:13px; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .btn{
+      border-radius:10px; padding:9px 12px; border:1px solid var(--accent);
+      background:var(--accent); color:#fff; cursor:pointer; font-size:14px;
     }
-    .card {
-      background: var(--card-bg);
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      padding: 16px;
-      box-shadow: 0 10px 25px rgba(15,23,42,0.04);
+    .btn.secondary{ border-color:var(--border); background:#fff; color:var(--text); }
+    .btn.danger{ border-color:var(--danger); background:var(--danger); }
+    .btn:disabled{ opacity:0.5; cursor:default }
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px;
+      box-shadow:0 10px 25px rgba(15,23,42,0.06);
     }
-    h1 {
-      margin: 0 0 6px;
-      font-size: 18px;
+    .grid2{ display:grid; grid-template-columns:1fr; gap:12px; }
+    @media(min-width:900px){ .grid2{ grid-template-columns:1fr 1fr; } }
+    .section{ display:none; }
+    .section.active{ display:block; }
+    .h2{ font-size:16px; font-weight:800; margin:0 0 6px; }
+    .preview-wrap{ display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap; margin-top:10px; }
+    .preview{
+      border:1px solid var(--border); border-radius:12px; padding:10px; background:#fff;
+      display:grid; grid-template-columns:repeat(15, 10px); gap:2px;
     }
-    p {
-      margin: 0 0 10px;
-      font-size: 13px;
-      color: var(--muted);
+    .px{ width:10px; height:10px; border-radius:2px; border:1px solid rgba(0,0,0,0.08); background:#fff; }
+    .px.on.mario{ background:#ef4444; }
+    .px.on.duck{ background:#f59e0b; }
+    .pill{
+      display:inline-block; padding:4px 8px; border:1px solid var(--border); border-radius:999px;
+      font-size:12px; color:var(--muted); background:#fff;
     }
-    .step-block {
-      margin-top: 8px;
-      padding-top: 8px;
-      border-top: 1px solid #e5e7eb;
+    .kpi{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    pre{
+      background:#0b1020; color:#b6fcb6; padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.10);
+      overflow:auto; max-height:280px;
     }
-    .step-title {
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 6px;
+    .box{
+      background:#fff; border:1px solid var(--border); border-radius:14px; padding:12px;
     }
-    .section-title {
-      font-size: 13px;
-      font-weight: 600;
-      margin-top: 8px;
-      margin-bottom: 4px;
+    .sw{ width:14px; height:14px; border-radius:4px; border:1px solid rgba(0,0,0,0.35); display:inline-block; vertical-align:middle; margin-right:8px; }
+    .c-r{ background:#ff0000 } .c-o{ background:#ffa500 } .c-b{ background:#0000ff } .c-g{ background:#00ff00 } .c-w{ background:#ffffff } .c-y{ background:#ffff00 }
+    .ori-row{ display:flex; align-items:center; gap:10px; margin:3px 0; }
+    .warn{ color:var(--warn); font-size:13px; }
+    .ok{ color:var(--ok); font-size:13px; }
+    .dropdown{ position:relative; display:inline-block; }
+    .menu{
+      position:absolute; top:44px; right:0;
+      min-width:210px;
+      background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:0 16px 40px rgba(15,23,42,0.18);
+      padding:8px; display:none; z-index:200;
     }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
-      max-width: 260px;
-      margin: 10px 0;
-    }
-    .cell {
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-      cursor: pointer;
-      background: #ffffff;
-      transition: box-shadow 0.15s ease, border-color 0.15s ease;
-    }
-    .cell.selected {
-      box-shadow: 0 0 0 2px var(--accent);
-      border-color: var(--accent);
-    }
-    .mini-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 4px;
-      max-width: 160px;
-      margin: 6px 0;
-    }
-    .mini-cell {
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      border-radius: 3px;
-      border: 1px solid var(--border);
-      background: #ffffff;
-    }
-    .palette {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 6px 0 4px;
-    }
-    .swatch {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      border: 2px solid transparent;
-      cursor: pointer;
-      box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
-      padding: 0;
-      position: relative;
-    }
-    .swatch.active {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(37,99,235,0.4);
-    }
-    .row {
-      margin-top: 10px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 12px;
-      color: var(--muted);
-    }
-    button {
-      border-radius: 4px;
-      border: 1px solid var(--accent);
-      padding: 6px 12px;
-      background: var(--accent);
-      color: #ffffff;
-      cursor: pointer;
-      font-size: 13px;
-    }
-    button.secondary {
-      border-color: var(--border);
-      background: #ffffff;
-      color: var(--text);
-    }
-    button.danger {
-      border-color: #ef4444;
-      background: #ef4444;
-      color: #ffffff;
-    }
-    button:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-    pre {
-      background: #f9fafb;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-      padding: 8px;
-      font-size: 12px;
-      overflow-x: auto;
-      margin: 6px 0 0;
-    }
-    .hidden {
-      display: none;
-    }
-    .progress {
-      margin-top: 6px;
-      font-size: 11px;
-      color: var(--muted);
-    }
-    .progress-bar {
-      width: 100%;
-      height: 6px;
-      border-radius: 999px;
-      background: #e5e7eb;
-      overflow: hidden;
-      margin-top: 4px;
-    }
-    .progress-fill {
-      height: 100%;
-      width: 0%;
-      border-radius: 999px;
-      background: var(--accent);
-      transition: width 0.2s linear;
-    }
-    .orientation-box {
-      margin-top: 6px;
-      padding: 8px;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-      background: #f9fafb;
-      font-size: 13px;
-    }
-    .orientation-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 2px 0;
-    }
-    .orientation-swatch {
-      width: 16px;
-      height: 16px;
-      border-radius: 3px;
-      border: 1px solid #9ca3af;
-      flex-shrink: 0;
-    }
-    .c-r { background: #ff0000; }
-    .c-o { background: #ffa500; }
-    .c-b { background: #0000ff; }
-    .c-g { background: #00ff00; }
-    .c-w { background: #ffffff; }
-    .c-y { background: #ffff00; }
-    .hint-small {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 4px;
-    }
-    .stack {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .error-text {
-      color: var(--error);
-    }
-    .page {
-      margin-top: 8px;
-    }
-
-    .settings-fab {
-      position: fixed;
-      top: 12px;
-      right: 12px;
-      z-index: 1500;
-      border-radius: 999px;
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-      background: #ffffff;
-      color: var(--text);
-      box-shadow: 0 10px 25px rgba(15,23,42,0.10);
-      cursor: pointer;
-      font-size: 13px;
-    }
-    .settings-fab:hover {
-      box-shadow: 0 12px 28px rgba(15,23,42,0.14);
-    }
-
-    .settings-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.35);
-      z-index: 2400;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 56px 16px 16px;
-      pointer-events: auto;
-    }
-    .settings-overlay.hidden { display: none; }
-
-    .settings-panel {
-      width: 100%;
-      max-width: 780px;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      box-shadow: 0 20px 40px rgba(15,23,42,0.22);
-      padding: 14px;
-      pointer-events: auto;
-    }
-
-    .settings-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .settings-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text);
-      margin: 0;
-    }
-    .settings-sub {
-      font-size: 12px;
-      color: var(--muted);
-      margin: 2px 0 0;
-    }
-    .settings-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-      margin-top: 8px;
-    }
-    @media (min-width: 620px){
-      .settings-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-    .settings-card {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px;
-      background: #fafafa;
-    }
-    .settings-card h3 {
-      margin: 0 0 6px;
-      font-size: 13px;
-    }
-    .btn-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-    .btn-row button {
-      border-radius: 6px;
-      padding: 7px 10px;
-      font-size: 13px;
-    }
-    .btn-row button.secondary {
-      background: #ffffff;
-    }
-    .log-wrap {
-      margin-top: 10px;
-    }
-    .tiny-note {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 6px;
-    }
+    .menu.open{ display:block; }
+    .menu .btn{ width:100%; justify-content:center; }
+    .menu .btn + .btn{ margin-top:8px; }
+    .mini-note{ font-size:12px; color:var(--muted); margin-top:6px; }
+    .hr{ height:1px; background:#e5e7eb; margin:12px 0; }
   </style>
 </head>
 <body>
 
-<button id="settingsFab" class="settings-fab" type="button">⚙ Settings</button>
-
-<div id="settingsOverlay" class="settings-overlay hidden" aria-hidden="true">
-  <div id="settingsPanel" class="settings-panel" role="dialog" aria-modal="true">
-    <div class="settings-header">
-      <div>
-        <div class="settings-title">Settings · Manual Motor Control</div>
-        <div class="settings-sub">These buttons send integer denotation codes to the Arduinos.</div>
-      </div>
-      <button id="closeSettingsBtn" type="button" class="secondary">Close</button>
+<div class="topbar">
+  <div class="topbar-inner">
+    <div>
+      <div class="title">Mural Presets</div>
+      <div class="muted" id="subTitle">Home</div>
     </div>
 
-    <div class="settings-grid">
-      <div class="settings-card">
-        <h3>RL pulley motor</h3>
-        <div class="btn-row">
-          <button type="button" class="secondary" data-manualcmd="222">IN (222)</button>
-          <button type="button" class="secondary" data-manualcmd="221">OUT (221)</button>
+    <div class="row">
+      <div class="dropdown">
+        <button class="btn secondary" id="insertBtn" type="button">Insert ▾</button>
+        <div class="menu" id="insertMenu">
+          <button class="btn secondary" type="button" id="insertBottomBtn">Insert bottom (241)</button>
+          <button class="btn secondary" type="button" id="insertSidesBtn">Insert sides (222,231,222,231)</button>
+          <div class="mini-note">Always available. Sends bytes to all detected ports, waits for DONE after each byte.</div>
         </div>
-        <div class="tiny-note">Sends 222 for IN, 221 for OUT.</div>
       </div>
 
-      <div class="settings-card">
-        <h3>FB pulley motor</h3>
-        <div class="btn-row">
-          <button type="button" class="secondary" data-manualcmd="231">IN (231)</button>
-          <button type="button" class="secondary" data-manualcmd="232">OUT (232)</button>
+      <div class="dropdown">
+        <button class="btn secondary" id="ejectBtn" type="button">Eject ▾</button>
+        <div class="menu" id="ejectMenu">
+          <button class="btn secondary" type="button" id="ejectSidesBtn">Eject sides (221,232,221,232)</button>
+          <button class="btn secondary" type="button" id="ejectBottomBtn">Eject bottom (242)</button>
+          <div class="mini-note">Always available.</div>
         </div>
-        <div class="tiny-note">Sends 231 for IN, 232 for OUT.</div>
       </div>
 
-      <div class="settings-card">
-        <h3>Bottom motor motor</h3>
-        <div class="btn-row">
-          <button type="button" class="secondary" data-manualcmd="241">IN (241)</button>
-          <button type="button" class="secondary" data-manualcmd="242">OUT (242)</button>
-        </div>
-        <div class="tiny-note">Sends 241 for IN, 242 for OUT.</div>
-      </div>
-
-      <div class="settings-card">
-        <h3>DC rack-and-pinion</h3>
-        <div class="btn-row">
-          <button type="button" class="secondary" data-manualcmd="300">RUN (300)</button>
-        </div>
-        <div class="tiny-note">Sends 300.</div>
-      </div>
-    </div>
-
-    <div class="log-wrap">
-      <div class="section-title">Manual command log</div>
-      <pre id="settingsLogPre"></pre>
-      <div class="tiny-note">This shows the same Arduino log lines you already print on the server.</div>
+      <button class="btn secondary" id="homeBtn" type="button">Home</button>
     </div>
   </div>
 </div>
 
 <div class="shell">
-  <div class="card">
 
-    <h1>Cube U-Face Mural Solver</h1>
-    <p>
-      Draw ANY 3×3 pattern for the top (U) face using cube colors.
-    </p>
+  <div id="homeSection" class="section active">
+    <div class="grid2">
 
-    <div id="page1" class="page">
-      <div class="step-block">
-        <div class="step-title">Page 1 · Draw the U face</div>
-
-        <p id="hintText">
-          Click a sticker to select it, then choose a color from the palette.
-        </p>
-
-        <div class="section-title">Choose color for the selected sticker</div>
-        <div class="palette" id="palette"></div>
-
-        <div class="section-title">Paint the 3×3 U face</div>
-        <div class="grid" id="grid"></div>
-
-        <div class="row">
-          <div id="legalStatus">
-            Draw any pattern you like. The solver will check solvability on the next page.
+      <div class="card">
+        <div class="h2">Mario preset</div>
+        <div class="muted">20 cubes (5×4). Order: 1,1 → 1,4 then 2,1 → 2,4 ... 5,4</div>
+        <div class="preview-wrap">
+          <div>
+            <div class="pill">Preview 12×15</div>
+            <div class="preview" id="marioPreview"></div>
           </div>
-          <button id="toPage2Btn">Next: configure solver</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="page2" class="page hidden">
-      <div class="step-block">
-        <div class="step-title">Page 2 · Run the solver search</div>
-        <p>
-          When you start, the solver will search for a sequence of moves that
-          draws your U-face mural using R/L/F/B/D turns.
-        </p>
-
-        <button id="startSolveBtn">Start solver</button>
-
-        <div class="progress hidden" id="solveProgress">
-          <div id="solveLabel">Solver running...</div>
-          <div class="progress-bar">
-            <div class="progress-fill" id="solveFill"></div>
+          <div style="min-width:240px;">
+            <div class="kpi">
+              <span class="pill" id="marioKpi"></span>
+              <span class="pill" id="lastPresetPill"></span>
+            </div>
+            <div class="hr"></div>
+            <button class="btn" type="button" id="startMarioBtn">Start Mario</button>
+            <div class="mini-note">If you previously ran Duck, this will UNDO Duck cube-by-cube, then MAKE Mario.</div>
           </div>
         </div>
-
-        <p id="solveStatus">Solver not started yet.</p>
-
-        <button id="toPage3Btn" class="secondary" disabled>Next: place cube</button>
       </div>
-    </div>
 
-    <div id="page3" class="page hidden">
-      <div class="step-block">
-        <div class="step-title">Page 3 · Place the cube</div>
-        <p>
-          Place the cube in the fixture so each face center matches the colors
-          below. The Up (U) face is the mural face you drew.
-        </p>
-
-        <div class="orientation-box" id="orientationBox">
-          <em>Orientation will appear after the solver finishes.</em>
-        </div>
-        <div class="hint-small">
-          Centers: match these colors exactly on the cube before continuing.
-        </div>
-
-        <div class="section-title" style="margin-top:10px;">Original U-face pattern you drew</div>
-        <div class="mini-grid" id="patternPreview"></div>
-
-        <div class="hint-small">
-          This 3×3 pattern is the U (top) face the solver will draw on your cube.
-        </div>
-
-        <div class="row" style="margin-top:12px;">
-          <div>When the cube is placed correctly, continue to the physical solver.</div>
-          <button id="toPage4Btn" class="secondary">Next: run solver</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="page4" class="page hidden">
-      <div class="step-block">
-        <div class="step-title">Page 4 · Run the physical solver and finish</div>
-        <p>
-          The solver is ready to send moves to the cube. Make sure the cube is
-          placed according to the previous page, then send the commands.
-          When the solver is done, carefully remove the cube and go back to
-          the drawing page to design a new mural.
-        </p>
-
-        <div class="section-title" style="margin-top:10px;">Moves and serial commands</div>
-        <pre id="movesPre"></pre>
-        <pre id="serialPre"></pre>
-
-        <div class="section-title" style="margin-top:10px;">Run the physical solver</div>
-        <div class="stack">
-          <button id="runBtn" disabled>Send commands to solver</button>
-        </div>
-
-        <div class="progress hidden" id="runProgress">
-          <div id="runLabel">Running commands on solver...</div>
-          <div class="progress-bar">
-            <div class="progress-fill" id="runFill"></div>
+      <div class="card">
+        <div class="h2">Duck preset</div>
+        <div class="muted">20 cubes (5×4). Order: 1,1 → 1,4 then 2,1 → 2,4 ... 5,4</div>
+        <div class="preview-wrap">
+          <div>
+            <div class="pill">Preview 12×15</div>
+            <div class="preview" id="duckPreview"></div>
+          </div>
+          <div style="min-width:240px;">
+            <div class="kpi">
+              <span class="pill" id="duckKpi"></span>
+            </div>
+            <div class="hr"></div>
+            <button class="btn" type="button" id="startDuckBtn">Start Duck</button>
+            <div class="mini-note">If you previously ran Mario, this will UNDO Mario cube-by-cube, then MAKE Duck.</div>
           </div>
         </div>
-
-        <pre id="solverLogPre" class="hidden"></pre>
-
-        <div class="row" style="margin-top:12px;">
-          <div>After the solver finishes and you remove the cube, go back to draw a new mural.</div>
-          <button id="backToStartBtn" class="secondary">Back to drawing page</button>
-        </div>
       </div>
+
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="h2">Global log</div>
+      <div class="muted">Insert/Eject and sends append here too.</div>
+      <pre id="globalLog"></pre>
     </div>
   </div>
+
+  <div id="placeSection" class="section">
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <div>
+          <div class="h2" id="placeTitle">Place cube</div>
+          <div class="muted" id="placeSub">Page 1 · Place the cube in the fixture</div>
+        </div>
+        <div class="row">
+          <span class="pill" id="modePill">mode</span>
+          <span class="pill" id="posPill">pos</span>
+          <span class="pill" id="idxPill">idx</span>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="box">
+        <div class="h2" style="font-size:14px;">Orientation to place cube</div>
+        <div class="muted">Match cube centers to these faces before continuing.</div>
+        <div id="orientationBox" style="margin-top:8px;"></div>
+        <div id="orientationHint" class="mini-note"></div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row" style="justify-content:space-between;">
+        <div class="muted">Page 1 actions</div>
+        <div class="row">
+          <button class="btn secondary" type="button" id="placeBackBtn">Back</button>
+          <button class="btn" type="button" id="runSolverBtn">Run solver →</button>
+        </div>
+      </div>
+
+      <div class="mini-note">
+        “Run solver” here just means: go to the cube execution page for this cube, where you can send the preset bytes multiple times.
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="h2">Log</div>
+      <pre id="placeLog"></pre>
+    </div>
+  </div>
+
+  <div id="cubeSection" class="section">
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <div>
+          <div class="h2" id="cubeTitle">Cube</div>
+          <div class="muted" id="cubeSub">Page 2 · Send commands</div>
+        </div>
+        <div class="row">
+          <span class="pill" id="cubeModePill">mode</span>
+          <span class="pill" id="cubePosPill">pos</span>
+          <span class="pill" id="cubeIdxPill">idx</span>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="box">
+        <div class="h2" style="font-size:14px;">Target / entry info</div>
+        <div class="muted">This shows the preset entry for this cube (moves + serial). You can send multiple times.</div>
+
+        <div class="hr"></div>
+
+        <div class="muted"><b>Notes</b></div>
+        <div id="notesBox" class="mini-note"></div>
+
+        <div class="hr"></div>
+
+        <div class="muted"><b>Moves</b></div>
+        <pre id="movesPre"></pre>
+
+        <div class="muted" style="margin-top:10px;"><b>Serial bytes</b></div>
+        <pre id="serialPre"></pre>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row" style="justify-content:space-between;">
+        <div class="row">
+          <button class="btn" type="button" id="sendBtn">Send commands to solver</button>
+          <button class="btn secondary" type="button" id="backToPlaceBtn">Back to placement</button>
+        </div>
+        <div class="row">
+          <button class="btn danger" type="button" id="redoBtn">Redo this step</button>
+          <button class="btn" type="button" id="nextBtn">Next</button>
+        </div>
+      </div>
+
+      <div class="mini-note" id="nextHint"></div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="h2">Log</div>
+      <pre id="cubeLog"></pre>
+    </div>
+  </div>
+
 </div>
 
 <script>
-  const COLORS = {
-    r: "#ff0000",
-    o: "#ffa500",
-    b: "#0000ff",
-    g: "#00ff00",
-    w: "#ffffff",
-    y: "#ffff00",
-  };
-
   const COLOR_META = {
-    r: { name: "Red",    css: "c-r" },
+    r: { name: "Red", css: "c-r" },
     o: { name: "Orange", css: "c-o" },
-    b: { name: "Blue",   css: "c-b" },
-    g: { name: "Green",  css: "c-g" },
-    w: { name: "White",  css: "c-w" },
+    b: { name: "Blue", css: "c-b" },
+    g: { name: "Green", css: "c-g" },
+    w: { name: "White", css: "c-w" },
     y: { name: "Yellow", css: "c-y" },
   };
 
+  const FACE_ORDER = ["U","F","R","L","B","D"];
   const FACE_LABELS = {
-    U: "Up (U)",
-    L: "Left (L)",
-    F: "Front (F)",
-    R: "Right (R)",
-    B: "Back (B)",
-    D: "Down (D)",
+    U: "UP",
+    F: "FRONT",
+    R: "RIGHT",
+    L: "LEFT",
+    B: "BACK",
+    D: "DOWN",
   };
 
-  const paletteOrder = ["r","o","b","g","w","y"];
+  const homeSection = document.getElementById("homeSection");
+  const placeSection = document.getElementById("placeSection");
+  const cubeSection = document.getElementById("cubeSection");
 
-  const page1 = document.getElementById("page1");
-  const page2 = document.getElementById("page2");
-  const page3 = document.getElementById("page3");
-  const page4 = document.getElementById("page4");
+  const subTitle = document.getElementById("subTitle");
 
-  const toPage2Btn = document.getElementById("toPage2Btn");
-  const startSolveBtn = document.getElementById("startSolveBtn");
-  const toPage3Btn = document.getElementById("toPage3Btn");
-  const toPage4Btn = document.getElementById("toPage4Btn");
-  const backToStartBtn = document.getElementById("backToStartBtn");
+  const marioPreview = document.getElementById("marioPreview");
+  const duckPreview = document.getElementById("duckPreview");
+  const marioKpi = document.getElementById("marioKpi");
+  const duckKpi = document.getElementById("duckKpi");
+  const lastPresetPill = document.getElementById("lastPresetPill");
 
-  const paletteEl = document.getElementById("palette");
-  const gridEl = document.getElementById("grid");
+  const startMarioBtn = document.getElementById("startMarioBtn");
+  const startDuckBtn = document.getElementById("startDuckBtn");
+  const homeBtn = document.getElementById("homeBtn");
 
-  const solveProgress  = document.getElementById("solveProgress");
-  const solveFill      = document.getElementById("solveFill");
-  const solveLabel     = document.getElementById("solveLabel");
-  const solveStatus    = document.getElementById("solveStatus");
+  const insertBtn = document.getElementById("insertBtn");
+  const ejectBtn = document.getElementById("ejectBtn");
+  const insertMenu = document.getElementById("insertMenu");
+  const ejectMenu = document.getElementById("ejectMenu");
+  const insertBottomBtn = document.getElementById("insertBottomBtn");
+  const insertSidesBtn = document.getElementById("insertSidesBtn");
+  const ejectSidesBtn = document.getElementById("ejectSidesBtn");
+  const ejectBottomBtn = document.getElementById("ejectBottomBtn");
 
+  const globalLog = document.getElementById("globalLog");
+  const placeLog = document.getElementById("placeLog");
+  const cubeLog = document.getElementById("cubeLog");
+
+  const placeTitle = document.getElementById("placeTitle");
+  const placeSub = document.getElementById("placeSub");
   const orientationBox = document.getElementById("orientationBox");
-  const patternPreview = document.getElementById("patternPreview");
+  const orientationHint = document.getElementById("orientationHint");
 
-  const movesPre       = document.getElementById("movesPre");
-  const serialPre      = document.getElementById("serialPre");
-  const runBtn         = document.getElementById("runBtn");
-  const runProgress    = document.getElementById("runProgress");
-  const runFill        = document.getElementById("runFill");
-  const runLabel       = document.getElementById("runLabel");
-  const solverLogPre   = document.getElementById("solverLogPre");
+  const modePill = document.getElementById("modePill");
+  const posPill = document.getElementById("posPill");
+  const idxPill = document.getElementById("idxPill");
 
-  const settingsFab = document.getElementById("settingsFab");
-  const settingsOverlay = document.getElementById("settingsOverlay");
-  const settingsPanel = document.getElementById("settingsPanel");
-  const closeSettingsBtn = document.getElementById("closeSettingsBtn");
-  const settingsLogPre = document.getElementById("settingsLogPre");
+  const placeBackBtn = document.getElementById("placeBackBtn");
+  const runSolverBtn = document.getElementById("runSolverBtn");
 
-  const cells = [];
-  const swatches = {};
-  const patternCells = [];
-  let selectedCell = null;
-  let centerColor = "w";
-  let runInterval = null;
-  let currentSerial = [];
-  let lastPattern = null;
+  const cubeTitle = document.getElementById("cubeTitle");
+  const cubeSub = document.getElementById("cubeSub");
+  const cubeModePill = document.getElementById("cubeModePill");
+  const cubePosPill = document.getElementById("cubePosPill");
+  const cubeIdxPill = document.getElementById("cubeIdxPill");
+  const notesBox = document.getElementById("notesBox");
+  const movesPre = document.getElementById("movesPre");
+  const serialPre = document.getElementById("serialPre");
+  const sendBtn = document.getElementById("sendBtn");
+  const backToPlaceBtn = document.getElementById("backToPlaceBtn");
+  const redoBtn = document.getElementById("redoBtn");
+  const nextBtn = document.getElementById("nextBtn");
+  const nextHint = document.getElementById("nextHint");
 
-  function showPage(pageId) {
-    [page1, page2, page3, page4].forEach(p => p.classList.add("hidden"));
-    document.getElementById(pageId).classList.remove("hidden");
+  let marioPreset = null;
+  let duckPreset = null;
+
+  let activePresetName = null;
+  let activePreset = null;
+
+  let prevPresetName = localStorage.getItem("lastPresetName") || "";
+  let phase = "make"; // "undo" then "make" when switching
+  let idx = 0;        // cube index
+  let currentPos = "";
+  let currentEntry = null;
+  let currentUndoInfo = null;
+
+  function show(section){
+    [homeSection, placeSection, cubeSection].forEach(s => s.classList.remove("active"));
+    section.classList.add("active");
   }
 
-  function setActiveSwatch(color) {
-    Object.entries(swatches).forEach(([c, btn]) => {
-      if (c === color) btn.classList.add("active");
-      else btn.classList.remove("active");
-    });
+  function logTo(pre, lines){
+    if(!Array.isArray(lines)) lines = [String(lines)];
+    pre.textContent += lines.join("\\n") + "\\n";
+    pre.scrollTop = pre.scrollHeight;
   }
 
-  function selectCell(cell) {
-    if (selectedCell) selectedCell.classList.remove("selected");
-    selectedCell = cell;
-    selectedCell.classList.add("selected");
+  function logAll(lines){
+    logTo(globalLog, lines);
+    logTo(placeLog, lines);
+    logTo(cubeLog, lines);
   }
 
-  function handleColorClick(color) {
-    if (!selectedCell) return;
-
-    const r = parseInt(selectedCell.dataset.r, 10);
-    const c = parseInt(selectedCell.dataset.c, 10);
-
-    if (r === 1 && c === 1 && color !== centerColor) {
-      centerColor = color;
-    }
-
-    selectedCell.dataset.color = color;
-    selectedCell.style.background = COLORS[color];
-    setActiveSwatch(color);
+  function closeMenus(){
+    insertMenu.classList.remove("open");
+    ejectMenu.classList.remove("open");
   }
 
-  function getGridColors() {
-    const g = [];
-    for (let r = 0; r < 3; r++) {
-      const row = [];
-      for (let c = 0; c < 3; c++) {
-        row.push(cells[r][c].dataset.color);
-      }
-      g.push(row);
-    }
-    return g;
-  }
-
-  function updatePatternPreview() {
-    if (!lastPattern) return;
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 3; c++) {
-        const color = lastPattern[r][c];
-        patternCells[r][c].style.background = COLORS[color] || "#ffffff";
-      }
-    }
-  }
-
-  function appendLogLines(lines) {
-    if (!Array.isArray(lines) || lines.length === 0) return;
-
-    const text = lines.join("\n") + "\n";
-
-    if (settingsLogPre) {
-      settingsLogPre.textContent = (settingsLogPre.textContent || "") + text;
-      settingsLogPre.scrollTop = settingsLogPre.scrollHeight;
-    }
-    if (solverLogPre && !solverLogPre.classList.contains("hidden")) {
-      solverLogPre.textContent = (solverLogPre.textContent || "") + text;
-      solverLogPre.scrollTop = solverLogPre.scrollHeight;
-    }
-  }
-
-  function openSettings() {
-    settingsOverlay.classList.remove("hidden");
-    settingsOverlay.setAttribute("aria-hidden", "false");
-  }
-
-  function closeSettings() {
-    settingsOverlay.classList.add("hidden");
-    settingsOverlay.setAttribute("aria-hidden", "true");
-  }
-
-  settingsFab.addEventListener("click", openSettings);
-  closeSettingsBtn.addEventListener("click", closeSettings);
-
-  settingsOverlay.addEventListener("click", () => closeSettings());
-
-  settingsPanel.addEventListener("click", (e) => {
+  insertBtn.addEventListener("click", (e) => {
     e.stopPropagation();
+    ejectMenu.classList.remove("open");
+    insertMenu.classList.toggle("open");
   });
 
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !settingsOverlay.classList.contains("hidden")) {
-      closeSettings();
-    }
+  ejectBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    insertMenu.classList.remove("open");
+    ejectMenu.classList.toggle("open");
   });
 
-  document.querySelectorAll("[data-manualcmd]").forEach(btn => {
-    btn.addEventListener("click", async (e) => {
-      e.stopPropagation();
+  document.addEventListener("click", () => closeMenus());
 
-      const cmdStr = btn.getAttribute("data-manualcmd");
-      const cmd = parseInt(cmdStr, 10);
-      if (!Number.isFinite(cmd)) return;
-
-      const oldText = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = "Sending...";
-
-      try {
-        const res = await fetch("/manual_cmd", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cmd })
-        });
-        const data = await res.json();
-
-        appendLogLines([`UI: Manual command ${cmd} -> ${data.ok ? "OK" : "ERROR"}`]);
-        if (Array.isArray(data.log)) appendLogLines(data.log);
-        if (data.error) appendLogLines([`ERROR: ${data.error}`]);
-
-      } catch (err) {
-        console.error(err);
-        appendLogLines([`UI ERROR: Failed to send manual command ${cmd}`]);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = oldText;
-      }
-    });
-  });
-
-  paletteOrder.forEach(c => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "swatch";
-    btn.style.background = COLORS[c];
-    btn.onclick = () => handleColorClick(c);
-    paletteEl.appendChild(btn);
-    swatches[c] = btn;
-  });
-
-  for (let r = 0; r < 3; r++) {
-    cells[r] = [];
-    for (let c = 0; c < 3; c++) {
-      const div = document.createElement("div");
-      div.className = "cell";
-      div.dataset.r = r;
-      div.dataset.c = c;
-      div.dataset.color = "w";
-      div.style.background = COLORS["w"];
-      div.onclick = () => selectCell(div);
-      gridEl.appendChild(div);
-      cells[r][c] = div;
-    }
-  }
-
-  for (let r = 0; r < 3; r++) {
-    patternCells[r] = [];
-    for (let c = 0; c < 3; c++) {
-      const d = document.createElement("div");
-      d.className = "mini-cell";
-      d.style.background = COLORS["w"];
-      patternPreview.appendChild(d);
-      patternCells[r][c] = d;
-    }
-  }
-
-  centerColor = "w";
-  selectCell(cells[1][1]);
-  setActiveSwatch("w");
-
-  toPage2Btn.onclick = () => showPage("page2");
-
-  let solveIntervalRef = null;
-
-  startSolveBtn.onclick = async () => {
-    solveStatus.classList.remove("error-text");
-
-    const grid = getGridColors();
-    lastPattern = grid;
-    updatePatternPreview();
-
-    solveStatus.textContent = "Solver is running on the server...";
-    solveProgress.classList.remove("hidden");
-    solveFill.style.width = "0%";
-    solveLabel.textContent = "Solver search in progress...";
-    let prog = 5;
-    solveFill.style.width = prog + "%";
-    if (solveIntervalRef) clearInterval(solveIntervalRef);
-    solveIntervalRef = setInterval(() => {
-      if (prog < 90) {
-        prog += 5;
-        solveFill.style.width = prog + "%";
-      }
-    }, 300);
-
-    startSolveBtn.disabled = true;
-    toPage3Btn.disabled = true;
-
-    try {
-      const res = await fetch("/solve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ grid })
+  async function sendBytes(bytes, label){
+    closeMenus();
+    logAll("UI: " + label + " -> sending: [" + bytes.join(", ") + "]");
+    try{
+      const res = await fetch("/api/send_bytes", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ bytes })
       });
       const data = await res.json();
-
-      if (solveIntervalRef) clearInterval(solveIntervalRef);
-      solveFill.style.width = "100%";
-      if (typeof data.elapsed === "number") {
-        solveLabel.textContent =
-          `Solver finished in ${data.elapsed.toFixed(2)} s (search depth ≤ ${data.depth_limit || 10}).`;
-      } else {
-        solveLabel.textContent = "Solver run complete.";
-      }
-
-      const isIllegal = !data.orientation;
-
-      solveStatus.textContent = data.message || (isIllegal
-        ? "Pattern is not solvable from a solved cube. It is treated as illegal."
-        : "Solver finished.");
-
-      if (isIllegal) solveStatus.classList.add("error-text");
-      else solveStatus.classList.remove("error-text");
-
-      movesPre.textContent = data.moves && data.moves.length
-        ? "Moves:\n" + data.moves.join(" ")
-        : (isIllegal ? "No moves: pattern is illegal / not solvable." : "No moves needed.");
-
-      serialPre.textContent = data.serial && data.serial.length
-        ? "Serial commands:\n" + data.serial.join("\n")
-        : (isIllegal ? "" : "No serial commands.");
-
-      currentSerial = Array.isArray(data.serial) ? data.serial : [];
-
-      if (data.orientation) renderOrientation(data.orientation);
-      else orientationBox.innerHTML = "<em>Pattern is not solvable / illegal, so no orientation is available.</em>";
-
-      if (!isIllegal && data.moves && data.moves.length >= 0) toPage3Btn.disabled = false;
-      else toPage3Btn.disabled = true;
-
-    } catch (err) {
-      console.error(err);
-      if (solveIntervalRef) clearInterval(solveIntervalRef);
-      solveFill.style.width = "0%";
-      solveLabel.textContent = "Error while solving.";
-      solveStatus.textContent = "Error contacting solver.";
-      solveStatus.classList.add("error-text");
-    } finally {
-      startSolveBtn.disabled = false;
+      if(Array.isArray(data.log)) logAll(data.log);
+      if(data.error) logAll("ERROR: " + data.error);
+      if(data.ok) logAll("UI: OK");
+      else logAll("UI: FAILED");
+      return data;
+    }catch(e){
+      logAll("UI ERROR: failed to send bytes: " + e);
+      return { ok:false, log:[], error:String(e) };
     }
-  };
+  }
 
-  toPage3Btn.onclick = () => showPage("page3");
+  insertBottomBtn.addEventListener("click", () => sendBytes([241], "Insert bottom"));
+  insertSidesBtn.addEventListener("click", () => sendBytes([222,231,222,231], "Insert sides"));
 
-  function renderOrientation(o) {
-    const faces = ["U","L","F","R","B","D"];
+  ejectSidesBtn.addEventListener("click", () => sendBytes([221,232,221,232], "Eject sides"));
+  ejectBottomBtn.addEventListener("click", () => sendBytes([242], "Eject bottom"));
+
+  function renderPreview(container, presetName, lines12x15){
+    container.innerHTML = "";
+    const onClass = presetName;
+    for(let r=0; r<12; r++){
+      const row = lines12x15[r] || "...............";
+      for(let c=0; c<15; c++){
+        const ch = row[c] || ".";
+        const d = document.createElement("div");
+        d.className = "px" + (ch !== "." ? (" on " + onClass) : "");
+        container.appendChild(d);
+      }
+    }
+  }
+
+  function setHomePills(){
+    marioKpi.textContent = "Mario: " + (marioPreset ? marioPreset.order.length : 0) + " cubes";
+    duckKpi.textContent = "Duck: " + (duckPreset ? duckPreset.order.length : 0) + " cubes";
+    lastPresetPill.textContent = "Last preset: " + (prevPresetName || "none");
+  }
+
+  async function fetchPreset(name){
+    const res = await fetch("/api/preset/" + name);
+    if(!res.ok) throw new Error("Failed to fetch preset " + name);
+    return await res.json();
+  }
+
+  function faceRow(face, col){
+    const meta = COLOR_META[col] || { name:"?", css:"" };
+    const sw = meta.css ? ("sw " + meta.css) : "sw";
+    return `<div class="ori-row"><span class="${sw}"></span><span><b>${FACE_LABELS[face] || face}:</b> ${meta.name} (${(col||"?").toUpperCase()})</span></div>`;
+  }
+
+  function renderOrientation(ori, hintText){
+    if(!ori){
+      orientationBox.innerHTML = '<div class="warn">No orientation available for this entry.</div>';
+      orientationHint.textContent = hintText || "";
+      return;
+    }
     let html = "";
-    faces.forEach(face => {
-      const col = o[face];
-      const meta = COLOR_META[col] || {name: "?", css: ""};
-      const label = FACE_LABELS[face] || face;
-      const symbol = col ? col.toUpperCase() : "?";
-      html += `
-        <div class="orientation-row">
-          <span class="orientation-swatch ${meta.css}"></span>
-          <span>${label}: ${meta.name} (${symbol})</span>
-        </div>
-      `;
+    FACE_ORDER.forEach(f => {
+      html += faceRow(f, ori[f]);
     });
     orientationBox.innerHTML = html;
+    orientationHint.textContent = hintText || "";
   }
 
-  toPage4Btn.onclick = () => {
-    if (!currentSerial || !currentSerial.length) {
-      alert("No solver commands are available yet. Make sure the solver finished successfully.");
+  async function startPreset(name){
+    activePresetName = name;
+    activePreset = (name === "mario") ? marioPreset : duckPreset;
+    idx = 0;
+
+    prevPresetName = localStorage.getItem("lastPresetName") || "";
+
+    phase = (prevPresetName && prevPresetName !== activePresetName) ? "undo" : "make";
+
+    placeLog.textContent = "";
+    cubeLog.textContent = "";
+    logAll("Selected preset: " + activePresetName + " (prev: " + (prevPresetName || "none") + ")");
+    await loadStep();
+    show(placeSection);
+    subTitle.textContent = "Page 1 · Place cube";
+  }
+
+  async function loadStep(){
+    currentPos = activePreset.order[idx];
+    currentEntry = activePreset.cubes[currentPos] || { moves:[], serial:[], orientation:null, notes:["No data"] };
+    currentUndoInfo = null;
+
+    modePill.textContent = "phase: " + phase.toUpperCase();
+    posPill.textContent = "cube " + currentPos;
+    idxPill.textContent = "idx " + (idx+1) + " / " + activePreset.order.length;
+
+    placeTitle.textContent = (phase === "undo")
+      ? ("UNDO " + prevPresetName.toUpperCase() + " → then MAKE " + activePresetName.toUpperCase())
+      : ("MAKE " + activePresetName.toUpperCase());
+
+    placeSub.textContent = "Page 1 · Place cube in fixture (then go to execution page)";
+
+    if(phase === "undo"){
+      if(!prevPresetName){
+        renderOrientation(null, "No previous preset stored.");
+        currentUndoInfo = { ok:false, message:"No previous preset", undo_moves:[], undo_serial:[], undo_orientation:null };
+      }else{
+        const res = await fetch("/api/undo_info", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ prev_preset: prevPresetName, pos: currentPos })
+        });
+        currentUndoInfo = await res.json();
+        renderOrientation(currentUndoInfo.undo_orientation, "Place cube like it was placed when MAKING the previous preset (so UNDO works).");
+        if(!currentUndoInfo.ok){
+          logAll("UNDO not available for " + currentPos + ": " + currentUndoInfo.message);
+        }else{
+          logAll("UNDO prepared for " + currentPos + " (moves: " + currentUndoInfo.undo_moves.length + ")");
+        }
+      }
+    }else{
+      renderOrientation(currentEntry.orientation, "Place cube to match this orientation for MAKE.");
+      if(!currentEntry.orientation){
+        logAll("Note: no orientation for this entry (might be already-solved / placeholder).");
+      }
+    }
+  }
+
+  function loadCubePage(){
+    cubeTitle.textContent = "Cube " + currentPos;
+    cubeSub.textContent = "Page 2 · Send bytes to solver (you can send multiple times)";
+    cubeModePill.textContent = "phase: " + phase.toUpperCase();
+    cubePosPill.textContent = "cube " + currentPos;
+    cubeIdxPill.textContent = "idx " + (idx+1) + " / " + activePreset.order.length;
+
+    let entry = currentEntry;
+    let notes = entry.notes || [];
+    let moves = entry.moves || [];
+    let serial = entry.serial || [];
+
+    if(phase === "undo"){
+      if(currentUndoInfo && currentUndoInfo.ok){
+        notes = ["UNDO of " + prevPresetName + " at cube " + currentPos].concat(notes || []);
+        moves = currentUndoInfo.undo_moves || [];
+        serial = currentUndoInfo.undo_serial || [];
+      }else{
+        notes = ["UNDO not available for this cube. You may still use Insert/Eject, then press Next."] .concat(notes || []);
+        moves = [];
+        serial = [];
+      }
+    }
+
+    notesBox.innerHTML = (notes && notes.length) ? notes.map(n => "• " + n).join("<br>") : "(none)";
+    movesPre.textContent = (moves && moves.length) ? moves.join(" ") : "(none)";
+    serialPre.textContent = (serial && serial.length) ? serial.join("\\n") : "(none)";
+
+    if(phase === "undo"){
+      if(currentUndoInfo && currentUndoInfo.ok){
+        nextBtn.textContent = "Next: MAKE same cube";
+        nextHint.textContent = "After UNDO, you MUST MAKE the new preset on this same cube before moving to the next cube.";
+      }else{
+        nextBtn.textContent = "Next";
+        nextHint.textContent = "UNDO not available here, so Next will continue the flow.";
+      }
+    }else{
+      nextBtn.textContent = (idx < activePreset.order.length - 1) ? "Next cube" : "Finish preset";
+      nextHint.textContent = (idx < activePreset.order.length - 1)
+        ? "After ejecting, go to the next cube."
+        : "Finishing will return to Home and store this preset as lastPresetName.";
+    }
+  }
+
+  async function doSendCurrent(){
+    let bytes = [];
+    if(phase === "undo"){
+      bytes = (currentUndoInfo && currentUndoInfo.ok) ? (currentUndoInfo.undo_serial || []) : [];
+      logAll("UI: Send (UNDO) bytes count: " + bytes.length);
+    }else{
+      bytes = (currentEntry && currentEntry.serial) ? currentEntry.serial : [];
+      logAll("UI: Send (MAKE) bytes count: " + bytes.length);
+    }
+
+    if(!bytes.length){
+      logAll("UI: No bytes to send for this step.");
       return;
     }
-    runBtn.disabled = false;
-    runProgress.classList.add("hidden");
-    runFill.style.width = "0%";
-    runLabel.textContent = "Running commands on solver...";
-    solverLogPre.classList.add("hidden");
-    solverLogPre.textContent = "";
-    showPage("page4");
-  };
 
-  runBtn.onclick = async () => {
-    if (!currentSerial || !currentSerial.length) {
-      alert("No serial commands to send from the solver.");
+    sendBtn.disabled = true;
+    try{
+      const data = await sendBytes(bytes, "Send commands");
+      if(data && data.ok){
+        logAll("UI: Send complete.");
+      }
+    }finally{
+      sendBtn.disabled = false;
+    }
+  }
+
+  async function nextStep(){
+    if(phase === "undo"){
+      if(currentUndoInfo && currentUndoInfo.ok){
+        phase = "make";
+        await loadStep();
+        show(placeSection);
+        subTitle.textContent = "Page 1 · Place cube";
+        logAll("Switched to MAKE for the same cube " + currentPos);
+        return;
+      }else{
+        phase = "make";
+        await loadStep();
+        show(placeSection);
+        subTitle.textContent = "Page 1 · Place cube";
+        logAll("UNDO unavailable, continuing with MAKE for the same cube " + currentPos);
+        return;
+      }
+    }
+
+    if(idx < activePreset.order.length - 1){
+      idx += 1;
+      phase = (prevPresetName && prevPresetName !== activePresetName) ? "undo" : "make";
+      await loadStep();
+      show(placeSection);
+      subTitle.textContent = "Page 1 · Place cube";
       return;
     }
 
-    runBtn.disabled = true;
-    solverLogPre.classList.remove("hidden");
-    solverLogPre.textContent = "";
-    runProgress.classList.remove("hidden");
-    runFill.style.width = "0%";
-    runLabel.textContent = "Running commands on solver...";
+    prevPresetName = activePresetName;
+    localStorage.setItem("lastPresetName", activePresetName);
+    logAll("Finished preset: " + activePresetName + ". Stored as lastPresetName.");
+    setHomePills();
+    show(homeSection);
+    subTitle.textContent = "Home";
+  }
 
-    let prog = 5;
-    runFill.style.width = prog + "%";
-    if (runInterval) clearInterval(runInterval);
-    runInterval = setInterval(() => {
-      if (prog < 90) {
-        prog += 3;
-        runFill.style.width = prog + "%";
-      }
-    }, 400);
+  startMarioBtn.addEventListener("click", () => startPreset("mario"));
+  startDuckBtn.addEventListener("click", () => startPreset("duck"));
 
-    try {
-      const res = await fetch("/run_robot", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serial: currentSerial })
-      });
-      const data = await res.json();
+  homeBtn.addEventListener("click", () => {
+    show(homeSection);
+    subTitle.textContent = "Home";
+  });
 
-      if (runInterval) clearInterval(runInterval);
-      runFill.style.width = "100%";
+  placeBackBtn.addEventListener("click", () => {
+    show(homeSection);
+    subTitle.textContent = "Home";
+  });
 
-      if (data.ok) runLabel.textContent = "Solver run complete. The cube mural should now be drawn.";
-      else runLabel.textContent = "Solver run finished with an error.";
+  runSolverBtn.addEventListener("click", () => {
+    loadCubePage();
+    show(cubeSection);
+    subTitle.textContent = "Page 2 · Cube execution";
+  });
 
-      if (Array.isArray(data.log)) {
-        solverLogPre.textContent = data.log.join("\n");
-      } else if (data.error) {
-        solverLogPre.textContent = data.error;
-      }
+  backToPlaceBtn.addEventListener("click", async () => {
+    show(placeSection);
+    subTitle.textContent = "Page 1 · Place cube";
+  });
 
-    } catch (err) {
-      console.error(err);
-      if (runInterval) clearInterval(runInterval);
-      runFill.style.width = "0%";
-      runLabel.textContent = "Error talking to solver.";
-      solverLogPre.textContent = "Error contacting /run_robot.";
-    } finally {
-      runBtn.disabled = false;
+  redoBtn.addEventListener("click", async () => {
+    logAll("UI: Redo pressed. Reloading current step.");
+    await loadStep();
+    show(placeSection);
+    subTitle.textContent = "Page 1 · Place cube";
+  });
+
+  sendBtn.addEventListener("click", doSendCurrent);
+  nextBtn.addEventListener("click", nextStep);
+
+  async function init(){
+    try{
+      marioPreset = await fetchPreset("mario");
+      duckPreset = await fetchPreset("duck");
+
+      renderPreview(marioPreview, "mario", marioPreset.preview_12x15);
+      renderPreview(duckPreview, "duck", duckPreset.preview_12x15);
+
+      setHomePills();
+      logTo(globalLog, "Ready. Detected lastPresetName: " + (prevPresetName || "none"));
+    }catch(e){
+      logTo(globalLog, "ERROR loading presets: " + e);
     }
-  };
+  }
 
-  backToStartBtn.onclick = () => {
-    centerColor = "w";
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 3; c++) {
-        const cell = cells[r][c];
-        cell.dataset.color = "w";
-        cell.style.background = COLORS["w"];
-      }
-    }
-    selectCell(cells[1][1]);
-    setActiveSwatch("w");
-
-    lastPattern = null;
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 3; c++) {
-        patternCells[r][c].style.background = COLORS["w"];
-      }
-    }
-
-    solveProgress.classList.add("hidden");
-    solveFill.style.width = "0%";
-    solveLabel.textContent = "Solver running...";
-    solveStatus.textContent = "Solver not started yet.";
-    solveStatus.classList.remove("error-text");
-    toPage3Btn.disabled = true;
-    movesPre.textContent = "";
-    serialPre.textContent = "";
-    orientationBox.innerHTML = "<em>Orientation will appear after the solver finishes.</em>";
-    runProgress.classList.add("hidden");
-    runFill.style.width = "0%";
-    runLabel.textContent = "Running commands on solver...";
-    solverLogPre.classList.add("hidden");
-    solverLogPre.textContent = "";
-    runBtn.disabled = true;
-    currentSerial = [];
-
-    showPage("page1");
-  };
-
-  showPage("page1");
+  init();
 </script>
 </body>
 </html>
 """
 
+
+# =========================================================
+# HTTP HANDLER
+# =========================================================
 
 class CubeHandler(BaseHTTPRequestHandler):
     def _set_headers(self, status=200, content_type="text/html; charset=utf-8"):
@@ -1663,91 +1333,78 @@ class CubeHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/" or self.path.startswith("/index"):
             self._set_headers(200, "text/html; charset=utf-8")
-            self.wfile.write(HTML_PAGE.encode("utf-8"))
-        else:
-            self._set_headers(404, "text/plain; charset=utf-8")
-            self.wfile.write(b"Not found")
+            self.wfile.write(APP_HTML.encode("utf-8"))
+            return
+
+        if self.path.startswith("/api/preset/"):
+            name = self.path.split("/")[-1].strip()
+            if name not in PRESETS:
+                self._set_headers(404, "application/json; charset=utf-8")
+                self.wfile.write(json.dumps({"error": "Preset not found"}).encode("utf-8"))
+                return
+            payload = build_preset_payload(name)
+            self._set_headers(200, "application/json; charset=utf-8")
+            self.wfile.write(json.dumps(payload).encode("utf-8"))
+            return
+
+        self._set_headers(404, "text/plain; charset=utf-8")
+        self.wfile.write(b"Not found")
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(length)
 
-        if self.path == "/solve":
+        if self.path == "/api/send_bytes":
             try:
                 data = json.loads(body.decode("utf-8"))
-                grid = data.get("grid")
-                sol = compute_solution(grid)
+                bytes_list = data.get("bytes") or []
+                print("\n=== /api/send_bytes ===")
+                print("Bytes:", bytes_list)
+                result = run_serial_commands(bytes_list)
+                self._set_headers(200, "application/json; charset=utf-8")
+                self.wfile.write(json.dumps(result).encode("utf-8"))
+            except Exception as e:
+                self._set_headers(500, "application/json; charset=utf-8")
+                self.wfile.write(json.dumps({"ok": False, "log": [], "error": str(e)}).encode("utf-8"))
+            return
 
-                sol["depth_limit"] = MAX_DEPTH_DEFAULT
+        if self.path == "/api/undo_info":
+            try:
+                data = json.loads(body.decode("utf-8"))
+                prev_preset = (data.get("prev_preset") or "").strip()
+                pos = (data.get("pos") or "").strip()
 
-                ori = sol.get("orientation")
-                if ori is not None:
-                    sol["orientation"] = {
-                        "U": ori["U"],
-                        "D": ori["D"],
-                        "F": ori["F"],
-                        "B": ori["B"],
-                        "R": ori["R"],
-                        "L": ori["L"],
+                if not prev_preset or prev_preset not in PRESETS:
+                    out = {
+                        "ok": False,
+                        "message": "No previous preset stored / invalid previous preset.",
+                        "undo_moves": [],
+                        "undo_serial": [],
+                        "undo_orientation": None,
                     }
+                else:
+                    out = compute_undo_for_cube(prev_preset, pos)
 
                 self._set_headers(200, "application/json; charset=utf-8")
-                self.wfile.write(json.dumps(sol).encode("utf-8"))
-
-                print("\n=== New /solve request ===")
-                print("U-face grid:")
-                if isinstance(grid, list):
-                    for row in grid:
-                        print(" ", row)
-                print("Moves:", sol.get("moves"))
-                print("Serial:", sol.get("serial"))
-                print("Orientation:", sol.get("orientation"))
-                print("Elapsed (s):", sol.get("elapsed"))
-
+                self.wfile.write(json.dumps(out).encode("utf-8"))
             except Exception as e:
-                print("Error in /solve:", e)
                 self._set_headers(500, "application/json; charset=utf-8")
-                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                self.wfile.write(json.dumps({
+                    "ok": False,
+                    "message": str(e),
+                    "undo_moves": [],
+                    "undo_serial": [],
+                    "undo_orientation": None,
+                }).encode("utf-8"))
+            return
 
-        elif self.path == "/run_robot":
-            try:
-                data = json.loads(body.decode("utf-8"))
-                serial_list = data.get("serial") or []
-                print("\n=== New /run_robot request ===")
-                print("Commands:", serial_list)
+        self._set_headers(404, "text/plain; charset=utf-8")
+        self.wfile.write(b"Not found")
 
-                result = run_serial_commands(serial_list)
 
-                self._set_headers(200, "application/json; charset=utf-8")
-                self.wfile.write(json.dumps(result).encode("utf-8"))
-
-            except Exception as e:
-                print("Error in /run_robot:", e)
-                self._set_headers(500, "application/json; charset=utf-8")
-                self.wfile.write(json.dumps({"ok": False, "log": [], "error": str(e)}).encode("utf-8"))
-
-        elif self.path == "/manual_cmd":
-            try:
-                data = json.loads(body.decode("utf-8"))
-                cmd = data.get("cmd")
-
-                print("\n=== New /manual_cmd request ===")
-                print("Manual cmd:", cmd)
-
-                result = run_manual_motor_command(cmd)
-
-                self._set_headers(200, "application/json; charset=utf-8")
-                self.wfile.write(json.dumps(result).encode("utf-8"))
-
-            except Exception as e:
-                print("Error in /manual_cmd:", e)
-                self._set_headers(500, "application/json; charset=utf-8")
-                self.wfile.write(json.dumps({"ok": False, "log": [], "error": str(e)}).encode("utf-8"))
-
-        else:
-            self._set_headers(404, "text/plain; charset=utf-8")
-            self.wfile.write(b"Not found")
-
+# =========================================================
+# RUN SERVER
+# =========================================================
 
 def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:
     server = HTTPServer((host, port), CubeHandler)
@@ -1755,6 +1412,10 @@ def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:
     url = f"http://{ip}:{port}"
     print_qr(url)
     print("\nServing on", url)
+    print("Home: /")
+    print("API:  /api/preset/mario , /api/preset/duck")
+    print("API:  POST /api/send_bytes   {bytes:[...]}  (bytes only, waits for DONE after each byte)")
+    print("API:  POST /api/undo_info    {prev_preset:'mario', pos:'1,1'}")
     print("Press Ctrl+C to stop.")
     try:
         server.serve_forever()
