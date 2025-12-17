@@ -39,6 +39,14 @@ body{
   margin:0 auto;
 }
 
+.img-responsive {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+
 .hero{
   padding:40px 0 20px;
 }

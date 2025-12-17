@@ -10,7 +10,7 @@
 
 <header class="topbar">
   <div class="container navwrap">
-    <div class="brand">TEAM RUBLING PIE FINAL '25</div>
+    <div class="brand">RUBLING</div>
     <nav class="navlinks">
       <a href="index.html">Overview</a>
       <a href="system.html">System</a>
@@ -34,15 +34,30 @@
 <main class="container">
 
   <section class="card section">
-    <h2>Circuit Schematics</h2>
+    <h2>Overview</h2>
+    The electrical system provides the movement of the cubes through cube motors that rotate the cube to solve it. It consists of motors (5 cube motors, 3 secondary motors and 1 motor for the rack-and-pinion), motor drivers, and Arduinos.
+    <img src="media/kicad.jpg" class="img-responsive">
   </section>
 
   <section class="card section">
-    <h2>Electrical Analysis</h2>
-  </section>
+    <h2>Electrical Components</h2>
+    Arduino Uno R4 - We use three Arduino Uno R4s to control the motors. The Arduinos receive commands from the Raspi through Serial input via USB cable. The commands from the Raspi are in the form of a 3-digit integer. The first digit corresponds to the Arduino board ID, the second identifies the motor, and the third digit informs of the direction to rotate. 
+    <br>
+    <br>
 
-  <section class="card section">
-    <h2>Component Selection Rationale</h2>
+    Motor Drivers - We use TB6600 drivers to drive our motors
+    <br>
+    <br>
+
+    Cube motors - We use NEMA17 motors with mounts and inserts to attach to the cube. We set the basic unit of movement for the cube motors to be a single 90 degree turn, which translates to 200 microsteps for the driver we use.
+    <br>
+    <br>
+
+    Secondary Motors - We use NEMA17 motors for these as well. For the two pulley motors, we use 90 degree turns to move it in and out; for the bottom motor with the lead screw, we use twenty 90 degree turns to bring the bottom cube motor up and down.
+    <br>
+    <br>
+    Power Supply - The Raspi derives its power from a power supply (5.1V, 2.5A) and powers the Arduinos. The motors are powered by a 12V, 4A power supply, fed in by the drivers.
+
   </section>
 
   <div class="footer">PIE Final · Electrical</div>
