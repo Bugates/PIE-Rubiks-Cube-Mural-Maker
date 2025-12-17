@@ -4,7 +4,7 @@ import socket
 import time
 import glob
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 try:
     import qrcode
@@ -17,6 +17,11 @@ try:
     HAS_SERIAL = True
 except ImportError:
     HAS_SERIAL = False
+
+
+# =========================================================
+# NETWORK HELPERS
+# =========================================================
 
 def get_local_ip() -> str:
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -43,6 +48,9 @@ def print_qr(url: str) -> None:
         print("(Install 'qrcode' Python package to see ASCII QR code.)")
 
 
+# =========================================================
+# SERIAL HELPERS
+# =========================================================
 
 def find_ports() -> List[str]:
     return glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
@@ -191,6 +199,9 @@ def run_serial_commands(commands: List[object]) -> Dict[str, object]:
         print("Finished.")
 
 
+# =========================================================
+# MOVE / PRESET HELPERS
+# =========================================================
 
 INV_MOVE: Dict[str, str] = {
     'F': "F'", "F'": 'F',
@@ -199,6 +210,7 @@ INV_MOVE: Dict[str, str] = {
     'L': "L'", "L'": 'L',
     'D': "D'", "D'": 'D',
 }
+
 
 def moves_to_serial(moves: List[str]) -> List[int]:
     cmd_map = {
@@ -250,7 +262,9 @@ INSERT_SIDES  = [222, 231, 222, 231]
 EJECT_SIDES   = [221, 232, 221, 232]
 EJECT_BOTTOM  = [213, 242, 214]
 
+
 VALID_COLS = set(["w", "r", "o", "b", "g", "y", "."])
+
 
 def _norm_cell(ch: str) -> str:
     if not ch:
@@ -294,6 +308,15 @@ def build_preview_12x15_from_u_faces(preset: Dict[str, object]) -> List[List[str
 def make_order(rows: int, cols: int) -> List[str]:
     return [key_rc(r, c) for r in range(1, rows + 1) for c in range(1, cols + 1)]
 
+
+def empty_5x4_preset(title: str) -> Dict[str, object]:
+    return {
+        "title": title,
+        "rows": 5,
+        "cols": 4,
+        "order": make_order(5, 4),
+        "cubes": {}
+    }
 
 PRESETS: Dict[str, Dict[str, object]] = {
     "mario": {
@@ -480,16 +503,12 @@ PRESETS: Dict[str, Dict[str, object]] = {
                 "notes": ["Already solved / stack: white side up (WWW/WWW/WWW)"]
             },
             "2,1": {
-                "u_face":[
-                ['o','o','o'],
-                ['w','o','o'],
-                ['w','w','w']
-                ],
-                "moves":['D',"L'","F'",'L'],
-                "serial":[211,141,111,142],
-                "orientation":{'U':'o','D':'r','F':'b','B':'g','R':'y','L':'w'},
-                "notes":[]
-                },
+                "u_face": [['o','o','o'],['w','o','o'],['w','w','w']],
+                "moves": ['D',"L'","F'",'L'],
+                "serial": [211,141,111,142],
+                "orientation": {'U':'o','D':'r','F':'b','B':'g','R':'y','L':'w'},
+                "notes": []
+            },
             "2,2": {
                 "u_face": [['y','y','y'],['o','y','y'],['y','y','y']],
                 "moves": ["F'", 'B', "L'", 'F', "B'"],
@@ -596,7 +615,675 @@ PRESETS: Dict[str, Dict[str, object]] = {
                 "notes": ["Already solved / stack: blue side up (BBB/BBB/BBB)"]
             },
         }
+    },
+
+"silly": {
+    "title": "Silly Face",
+    "rows": 5,
+    "cols": 4,
+    "order": make_order(5, 4),
+    "cubes": {
+
+        "1,1": {
+            "u_face": [['g','g','g'],['g','g','g'],['g','g','g']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack green side up"]
+        },
+
+        "1,2": {
+            "u_face": [['g','g','g'],['g','g','g'],['y','y','y']],
+            "moves": ["F'"],
+            "serial": [111],
+            "orientation": {'U':'g','D':'b','F':'r','B':'o','R':'w','L':'y'},
+            "notes": []
+        },
+
+        "1,3": {
+            "u_face": [['g','g','g'],['g','g','g'],['y','y','y']],
+            "moves": ["F'"],
+            "serial": [111],
+            "orientation": {'U':'g','D':'b','F':'r','B':'o','R':'w','L':'y'},
+            "notes": []
+        },
+
+        "1,4": {
+            "u_face": [['g','g','g'],['g','g','g'],['g','g','g']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack green side up"]
+        },
+
+        "2,1": {
+            "u_face": [['g','g','y'],['g','y','y'],['g','y','y']],
+            "moves": ['D',"B'","L'",'B'],
+            "serial": [211,131,141,132],
+            "orientation": {'U':'y','D':'w','F':'b','B':'g','R':'r','L':'o'},
+            "notes": []
+        },
+
+        "2,2": {
+            "u_face": [['y','y','y'],['b','w','y'],['b','b','y']],
+            "moves": ['F',"R'",'D',"R'",'F','L',"B'"],
+            "serial": [112,121,211,121,112,142,131],
+            "orientation": {'U':'w','D':'y','F':'b','B':'g','R':'o','L':'r'},
+            "notes": []
+        },
+
+        "2,3": {
+            "u_face": [['y','y','y'],['y','b','w'],['y','b','b']],
+            "moves": ['R','L','D','B','R','B'],
+            "serial": [122,142,211,132,122,132],
+            "orientation": {'U':'b','D':'g','F':'y','B':'w','R':'o','L':'r'},
+            "notes": []
+        },
+
+        "2,4": {
+            "u_face": [['y','g','g'],['y','y','g'],['y','y','g']],
+            "moves": ["D'",'B','R',"B'"],
+            "serial": [212,132,122,131],
+            "orientation": {'U':'y','D':'w','F':'b','B':'g','R':'r','L':'o'},
+            "notes": []
+        },
+
+        "3,1": {
+            "u_face": [['g','y','y'],['g','y','y'],['g','y','y']],
+            "moves": ["L'"],
+            "serial": [141],
+            "orientation": {'U':'y','D':'w','F':'b','B':'g','R':'r','L':'o'},
+            "notes": []
+        },
+
+        "3,2": {
+            "u_face": [['y','y','y'],['y','y','y'],['y','y','y']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack yellow side up"]
+        },
+
+        "3,3": {
+            "u_face": [['y','y','y'],['y','y','y'],['y','y','b']],
+            "moves": ["F'",'D','F'],
+            "serial": [111,211,112],
+            "orientation": {'U':'y','D':'w','F':'b','B':'g','R':'r','L':'o'},
+            "notes": []
+        },
+
+        "3,4": {
+            "u_face": [['y','y','g'],['y','y','g'],['y','y','g']],
+            "moves": ['R'],
+            "serial": [122],
+            "orientation": {'U':'y','D':'w','F':'b','B':'g','R':'r','L':'o'},
+            "notes": []
+        },
+
+        "4,1": {
+            "u_face": [['g','y','y'],['g','g','y'],['g','g','g']],
+            "moves": ["D'","L'",'B','L',"D'","R'"],
+            "serial": [212,141,132,142,212,121],
+            "orientation": {'U':'g','D':'b','F':'y','B':'w','R':'r','L':'o'},
+            "notes": []
+        },
+
+        "4,2": {
+            "u_face": [['y','b','r'],['y','y','r'],['y','y','y']],
+            "moves": ["L'",'B','L',"D'","R'"],
+            "serial": [141,132,142,212,121],
+            "orientation": {'U':'y','D':'w','F':'r','B':'o','R':'g','L':'b'},
+            "notes": []
+        },
+
+        "4,3": {
+            "u_face": [
+                ['r','b','y'],
+                ['r','y','y'],
+                ['y','y','y']
+            ],
+            "moves": ['R', 'B', "R'", "F'", 'L', 'F'],
+            "serial": [122, 132, 121, 111, 142, 112],
+            "orientation": {
+                'U': 'y',
+                'D': 'w',
+                'F': 'r',
+                'B': 'o',
+                'R': 'g',
+                'L': 'b'
+            },
+            "notes": []
+        },
+
+
+        "4,4": {
+            "u_face": [['y','y','g'],['y','g','g'],['g','g','g']],
+            "moves": ['D','R',"B'","R'",'D','L'],
+            "serial": [211,122,131,121,211,142],
+            "orientation": {'U':'g','D':'b','F':'y','B':'w','R':'r','L':'o'},
+            "notes": []
+        },
+
+        "5,1": {
+            "u_face": [['g','g','g'],['g','g','g'],['g','g','g']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack green side up"]
+        },
+
+        "5,2": {
+            "u_face": [['g','g','g'],['g','g','g'],['g','g','g']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack green side up"]
+        },
+
+        "5,3": {
+            "u_face": [['g','g','g'],['g','g','g'],['g','g','g']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack green side up"]
+        },
+
+        "5,4": {
+            "u_face": [['g','g','g'],['g','g','g'],['g','g','g']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack green side up"]
+        },
     }
+},
+
+
+"bunny": {
+    "title": "Bunny",
+    "rows": 5,
+    "cols": 4,
+    "order": make_order(5, 4),
+    "cubes": {
+
+        "1,1": {
+            "u_face": [['w','w','w'],['w','w','w'],['w','w','w']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack white side up"]
+        },
+
+        "1,2": {
+            "u_face": [['w','w','w'],['w','w','w'],['b','b','w']],
+            "moves": ["R'", "F'", 'R'],
+            "serial": [121,111,122],
+            "orientation": {'U':'w','D':'y','F':'o','B':'r','R':'g','L':'b'},
+            "notes": []
+        },
+
+        "1,3": {
+            "u_face": [['w','w','w'],['w','w','w'],['b','b','w']],
+            "moves": ["R'", "F'", 'R'],
+            "serial": [121,111,122],
+            "orientation": {'U':'w','D':'y','F':'o','B':'r','R':'g','L':'b'},
+            "notes": []
+        },
+
+        "1,4": {
+            "u_face": [['w','w','w'],['w','w','w'],['w','w','w']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack white side up"]
+        },
+
+        "2,1": {
+            "u_face": [['w','w','b'],['w','w','b'],['w','w','b']],
+            "moves": ['R'],
+            "serial": [122],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+
+        "2,2": {
+            "u_face": [['w','w','b'],['w','w','b'],['w','w','b']],
+            "moves": ['R'],
+            "serial": [122],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+
+        "2,3": {
+            "u_face": [['w','w','b'],['w','w','b'],['w','w','b']],
+            "moves": ['R'],
+            "serial": [122],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+
+        "2,4": {
+            "u_face": [['w','w','w'],['w','w','w'],['w','w','w']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack white side up"]
+        },
+
+        "3,1": {
+            "u_face": [['w','b','w'],['b','w','w'],['b','w','w']],
+            "moves": ['D',"B'","L'","D'",'B'],
+            "serial": [211,131,141,212,132],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+
+        "3,2": {
+            "u_face": [['w','w','w'],['w','w','w'],['b','w','w']],
+            "moves": ['F','D',"F'"],
+            "serial": [112,211,111],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+
+        "3,3": {
+            "u_face": [['w','w','w'],['w','w','w'],['w','b','w']],
+            "moves": ["R'",'L',"F'",'R',"L'"],
+            "serial": [121,142,111,122,141],
+            "orientation": {'U':'w','D':'y','F':'o','B':'r','R':'g','L':'b'},
+            "notes": []
+        },
+
+        "3,4": {
+            "u_face": [['b','w','w'],['w','b','w'],['w','b','w']],
+            "moves": ['L',"D'",'R',"B'","L'"],
+            "serial": [142,212,122,131,141],
+            "orientation": {'U':'b','D':'g','F':'y','B':'w','R':'o','L':'r'},
+            "notes": []
+        },
+
+        "4,1": {
+            "u_face": [['b','w','r'],['b','w','r'],['w','b','w']],
+            "moves": ["R'","D'",'R',"F'","R'",'L','F'],
+            "serial": [121,212,122,111,121,142,112],
+            "orientation": {'U':'w','D':'y','F':'r','B':'o','R':'b','L':'g'},
+            "notes": []
+        },
+
+        "4,2": {
+            "u_face": [['b','w','b'],['r','w','w'],['w','w','w']],
+            "moves": ["R'","D'","F'","L'",'F','R'],
+            "serial": [121,212,111,141,112,122],
+            "orientation": {'U':'w','D':'y','F':'o','B':'r','R':'g','L':'b'},
+            "notes": []
+        },
+
+        "4,3": {
+            "u_face": [['w','b','r'],['w','r','r'],['w','w','w']],
+            "moves": ['B','D',"R'",'L',"D'",'F',"R'"],
+            "serial": [132,211,121,142,212,112,121],
+            "orientation": {'U':'r','D':'o','F':'w','B':'y','R':'g','L':'b'},
+            "notes": []
+        },
+
+        "4,4": {
+            "u_face": [['w','b','w'],['w','b','w'],['b','w','w']],
+            "moves": ["L'",'D',"R'",'F','L'],
+            "serial": [141,211,121,112,142],
+            "orientation": {'U':'b','D':'g','F':'w','B':'y','R':'r','L':'o'},
+            "notes": []
+        },
+
+        "5,1": {
+            "u_face": [['w','w','b'],['w','w','w'],['w','w','w']],
+            "moves": ['B',"D'","B'"],
+            "serial": [132,212,131],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+
+        "5,2": {
+            "u_face": [['b','b','b'],['w','w','w'],['w','w','w']],
+            "moves": ['B'],
+            "serial": [132],
+            "orientation": {'U':'w','D':'y','F':'o','B':'r','R':'g','L':'b'},
+            "notes": []
+        },
+
+        "5,3": {
+            "u_face": [['b','b','b'],['w','w','w'],['w','w','w']],
+            "moves": ['B'],
+            "serial": [132],
+            "orientation": {'U':'w','D':'y','F':'o','B':'r','R':'g','L':'b'},
+            "notes": []
+        },
+
+        "5,4": {
+            "u_face": [['w','w','w'],['w','w','w'],['w','w','w']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack white side up"]
+        },
+
+    }
+},
+"parrot": {
+    "title": "Parrot",
+    "rows": 5,
+    "cols": 4,
+    "order": make_order(5, 4),
+    "cubes": {
+
+        # ---------- Row 1 ----------
+        "1,1": {
+            "u_face": [['w','w','w'],['w','w','w'],['w','w','w']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack white side up"]
+        },
+        "1,2": {
+            "u_face": [['w','w','w'],['w','w','w'],['w','w','w']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack white side up"]
+        },
+        "1,3": {
+            "u_face": [['w','w','w'],['w','r','r'],['r','w','w']],
+            "moves": ['F', "D'", 'B', "L'", "F'"],
+            "serial": [112, 212, 132, 141, 111],
+            "orientation": {'U':'r','D':'o','F':'g','B':'b','R':'y','L':'w'},
+            "notes": []
+        },
+        "1,4": {
+            "u_face": [['w','w','w'],['r','w','w'],['r','r','w']],
+            "moves": ['D', 'B', "L'", "B'", 'D', 'F'],
+            "serial": [211, 132, 141, 131, 211, 112],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+
+        # ---------- Row 2 ----------
+        "2,1": {
+            "u_face": [['w','w','w'],['w','w','w'],['w','w','w']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack white side up"]
+        },
+        "2,2": {
+            "u_face": [['w','w','w'],['w','w','w'],['w','w','r']],
+            "moves": ['R', "D'", "R'"],
+            "serial": [122, 212, 121],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+        "2,3": {
+            "u_face": [['r','w','b'],['r','w','w'],['r','r','w']],
+            "moves": ["R'", 'D', "F'", 'L', 'D', 'R'],
+            "serial": [121, 211, 111, 142, 211, 122],
+            "orientation": {'U':'w','D':'y','F':'b','B':'g','R':'o','L':'r'},
+            "notes": []
+        },
+        "2,4": {
+            "u_face": [['o','o','w'],['o','o','w'],['b','o','w']],
+            "moves": ['R', "L'", 'D', 'L'],
+            "serial": [122, 141, 211, 142],
+            "orientation": {'U':'o','D':'r','F':'y','B':'w','R':'g','L':'b'},
+            "notes": []
+        },
+
+        # ---------- Row 3 ----------
+        "3,1": {
+            "u_face": [['w','w','w'],['w','w','w'],['w','w','w']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack white side up"]
+        },
+        "3,2": {
+            "u_face": [['w','w','r'],['w','r','y'],['w','y','y']],
+            "moves": ["D'", "F'", 'L', "B'", 'R'],
+            "serial": [212, 111, 142, 131, 122],
+            "orientation": {'U':'r','D':'o','F':'b','B':'g','R':'w','L':'y'},
+            "notes": []
+        },
+        "3,3": {
+            "u_face": [['r','r','r'],['y','r','r'],['y','y','r']],
+            "moves": ['D', 'B', "L'", "B'", 'D', 'F'],
+            "serial": [211, 132, 141, 131, 211, 112],
+            "orientation": {'U':'r','D':'o','F':'g','B':'b','R':'y','L':'w'},
+            "notes": []
+        },
+        "3,4": {
+            "u_face": [['w','w','w'],['r','w','w'],['r','w','w']],
+            "moves": ['B', "L'", "B'"],
+            "serial": [132, 141, 131],
+            "orientation": {'U':'w','D':'y','F':'o','B':'r','R':'g','L':'b'},
+            "notes": []
+        },
+
+        # ---------- Row 4 ----------
+        "4,1": {
+            "u_face": [['w','w','w'],['w','w','w'],['w','w','g']],
+            "moves": ["F'", 'D', 'F'],
+            "serial": [111, 211, 112],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+        "4,2": {
+            "u_face": [['y','y','y'],['g','g','g'],['g','b','b']],
+            "moves": ["D'", "F'", 'D', 'B', 'D', "F'"],
+            "serial": [212, 111, 211, 132, 211, 111],
+            "orientation": {'U':'g','D':'b','F':'r','B':'o','R':'w','L':'y'},
+            "notes": []
+        },
+        "4,3": {
+            "u_face": [['y','b','r'],['b','r','r'],['b','r','r']],
+            "moves": ['D', "B'", "L'", 'D', 'B'],
+            "serial": [211, 131, 141, 211, 132],
+            "orientation": {'U':'r','D':'o','F':'g','B':'b','R':'y','L':'w'},
+            "notes": []
+        },
+        "4,4": {
+            "u_face": [['r','w','w'],['w','w','w'],['w','w','w']],
+            "moves": ['L', 'D', "L'"],
+            "serial": [142, 211, 141],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+
+        # ---------- Row 5 ----------
+        "5,1": {
+            "u_face": [['w','w','b'],['w','w','r'],['w','w','r']],
+            "moves": ["D'", 'R'],
+            "serial": [212, 122],
+            "orientation": {'U':'w','D':'y','F':'o','B':'r','R':'g','L':'b'},
+            "notes": []
+        },
+        "5,2": {
+            "u_face": [['b','b','b'],['b','w','w'],['w','w','w']],
+            "moves": ["D'", 'L', 'B', "L'"],
+            "serial": [212, 142, 132, 141],
+            "orientation": {'U':'w','D':'y','F':'o','B':'r','R':'g','L':'b'},
+            "notes": []
+        },
+        "5,3": {
+            "u_face": [['r','r','w'],['w','w','w'],['w','w','w']],
+            "moves": ['R', "B'", "R'"],
+            "serial": [122, 131, 121],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+        "5,4": {
+            "u_face": [['w','w','w'],['w','w','w'],['w','w','w']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack white side up"]
+        },
+    }
+},
+"penguin": {
+    "title": "Penguin",
+    "rows": 5,
+    "cols": 4,
+    "order": make_order(5, 4),
+    "cubes": {
+
+        # ---------- Row 1 ----------
+        "1,1": {
+            "u_face": [['w','w','w'],['w','w','b'],['w','w','b']],
+            "moves": ["B'", 'R', 'B'],
+            "serial": [131, 122, 132],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+        "1,2": {
+            "u_face": [['b','b','b'],['b','b','b'],['w','b','b']],
+            "moves": ['F', "D'", "F'"],
+            "serial": [112, 212, 111],
+            "orientation": {'U':'b','D':'g','F':'w','B':'y','R':'r','L':'o'},
+            "notes": []
+        },
+        "1,3": {
+            "u_face": [['b','b','b'],['b','b','b'],['b','b','w']],
+            "moves": ["F'", 'D', 'F'],
+            "serial": [111, 211, 112],
+            "orientation": {'U':'b','D':'g','F':'w','B':'y','R':'r','L':'o'},
+            "notes": []
+        },
+        "1,4": {
+            "u_face": [['w','w','w'],['b','w','w'],['b','w','w']],
+            "moves": ['B', "L'", "B'"],
+            "serial": [132, 141, 131],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+
+        # ---------- Row 2 ----------
+        "2,1": {
+            "u_face": [['w','b','w'],['w','b','w'],['w','b','w']],
+            "moves": ["R'", 'L'],
+            "serial": [121, 142],
+            "orientation": {'U':'b','D':'g','F':'w','B':'y','R':'r','L':'o'},
+            "notes": []
+        },
+        "2,2": {
+            "u_face": [['w','w','b'],['b','w','b'],['b','w','w']],
+            "moves": ['F', 'R', "D'", "F'", "L'"],
+            "serial": [112, 122, 212, 111, 141],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+        "2,3": {
+            "u_face": [['b','w','w'],['b','w','b'],['w','w','b']],
+            "moves": ["F'", "L'", 'D', 'F', 'R'],
+            "serial": [111, 141, 211, 112, 122],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+        "2,4": {
+            "u_face": [['w','b','w'],['w','b','w'],['w','b','w']],
+            "moves": ["R'", 'L'],
+            "serial": [121, 142],
+            "orientation": {'U':'b','D':'g','F':'w','B':'y','R':'r','L':'o'},
+            "notes": []
+        },
+
+        # ---------- Row 3 ----------
+        "3,1": {
+            "u_face": [['w','b','w'],['w','b','w'],['w','w','b']],
+            "moves": ['R', "D'", 'L', "F'", "R'"],
+            "serial": [122, 212, 142, 111, 121],
+            "orientation": {'U':'b','D':'g','F':'w','B':'y','R':'r','L':'o'},
+            "notes": []
+        },
+        "3,2": {
+            "u_face": [['w','o','o'],['w','w','o'],['w','w','w']],
+            "moves": ['D', 'F', "R'", "F'", 'D', 'B'],
+            "serial": [211, 112, 121, 111, 211, 132],
+            "orientation": {'U':'w','D':'y','F':'g','B':'b','R':'r','L':'o'},
+            "notes": []
+        },
+        "3,3": {
+            "u_face": [['o','o','w'],['o','w','w'],['w','w','w']],
+            "moves": ["D'", "F'", 'L', 'F', "D'", "B'"],
+            "serial": [212, 111, 142, 112, 212, 131],
+            "orientation": {'U':'w','D':'y','F':'b','B':'g','R':'o','L':'r'},
+            "notes": []
+        },
+        "3,4": {
+            "u_face": [['w','b','w'],['w','b','w'],['b','w','w']],
+            "moves": ["L'", 'D', "R'", 'F', 'L'],
+            "serial": [141, 211, 121, 112, 142],
+            "orientation": {'U':'b','D':'g','F':'w','B':'y','R':'r','L':'o'},
+            "notes": []
+        },
+
+        # ---------- Row 4 ----------
+        "4,1": {
+            "u_face": [['w','b','b'],['w','b','b'],['w','b','b']],
+            "moves": ['L'],
+            "serial": [142],
+            "orientation": {'U':'b','D':'g','F':'w','B':'y','R':'r','L':'o'},
+            "notes": []
+        },
+        "4,2": {
+            "u_face": [['w','w','w'],['w','w','w'],['w','w','w']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack white side up"]
+        },
+        "4,3": {
+            "u_face": [['w','w','w'],['w','w','w'],['w','w','w']],
+            "moves": [],
+            "serial": [],
+            "orientation": None,
+            "notes": ["Place the cube into stack white side up"]
+        },
+        "4,4": {
+            "u_face": [['b','b','w'],['b','b','w'],['b','b','w']],
+            "moves": ["R'"],
+            "serial": [121],
+            "orientation": {'U':'b','D':'g','F':'w','B':'y','R':'r','L':'o'},
+            "notes": []
+        },
+
+        # ---------- Row 5 ----------
+        "5,1": {
+            "u_face": [['w','b','w'],['w','w','w'],['w','w','w']],
+            "moves": ['R', "L'", 'B', "R'", 'L'],
+            "serial": [122, 141, 132, 121, 142],
+            "orientation": {'U':'w','D':'y','F':'o','B':'r','R':'g','L':'b'},
+            "notes": []
+        },
+        "5,2": {
+            "u_face": [['b','w','w'],['o','o','b'],['w','w','w']],
+            "moves": ["R'", "D'", 'B', 'D', "F'"],
+            "serial": [121, 212, 132, 211, 111],
+            "orientation": {'U':'o','D':'r','F':'b','B':'g','R':'y','L':'w'},
+            "notes": []
+        },
+        "5,3": {
+            "u_face": [['w','w','b'],['b','o','o'],['w','w','w']],
+            "moves": ["L'", "F'", 'D', 'L', 'B'],
+            "serial": [141, 111, 211, 142, 132],
+            "orientation": {'U':'o','D':'r','F':'b','B':'g','R':'y','L':'w'},
+            "notes": []
+        },
+        "5,4": {
+            "u_face": [['w','b','w'],['w','w','w'],['w','w','w']],
+            "moves": ['R', "L'", 'B', "R'", 'L'],
+            "serial": [122, 141, 132, 121, 142],
+            "orientation": {'U':'w','D':'y','F':'o','B':'r','R':'g','L':'b'},
+            "notes": []
+        },
+    }
+},
 }
 
 
@@ -623,13 +1310,13 @@ def build_preset_payload(name: str) -> Dict[str, object]:
         "rows": p.get("rows", 5),
         "cols": p.get("cols", 4),
         "order": p.get("order", []),
-        "preview_12x15": [],
+        "preview_15x12": [],
         "cubes": {},
     }
     for k in out["order"]:
         out["cubes"][k] = get_cube_entry(name, k)
 
-    out["preview_12x15"] = build_preview_12x15_from_u_faces({
+    out["preview_15x12"] = build_preview_12x15_from_u_faces({
         "rows": out["rows"],
         "cols": out["cols"],
         "cubes": out["cubes"]
@@ -661,6 +1348,9 @@ def compute_undo_for_cube(prev_preset: str, pos_key: str) -> Dict[str, object]:
     }
 
 
+# =========================================================
+# UI (HTML)
+# =========================================================
 
 APP_HTML = r"""<!doctype html>
 <html>
@@ -699,16 +1389,17 @@ APP_HTML = r"""<!doctype html>
     }
     .grid2{ display:grid; grid-template-columns:1fr; gap:12px; }
     @media(min-width:900px){ .grid2{ grid-template-columns:1fr 1fr; } }
+    .grid3{ display:grid; grid-template-columns:1fr; gap:12px; }
+    @media(min-width:900px){ .grid3{ grid-template-columns:1fr 1fr; } }
     .section{ display:none; }
     .section.active{ display:block; }
     .h2{ font-size:16px; font-weight:800; margin:0 0 6px; }
     .preview-wrap{ display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap; margin-top:10px; }
     .preview{
       border:1px solid var(--border); border-radius:12px; padding:10px; background:#fff;
-      display:grid; grid-template-columns:repeat(15, 10px); gap:2px;
+      display:grid; grid-template-columns:repeat(12, 10px); gap:2px;
     }
     .px{ width:10px; height:10px; border-radius:2px; border:1px solid rgba(0,0,0,0.08); background:#fff; }
-
     .pill{
       display:inline-block; padding:4px 8px; border:1px solid var(--border); border-radius:999px;
       font-size:12px; color:var(--muted); background:#fff;
@@ -797,10 +1488,9 @@ APP_HTML = r"""<!doctype html>
         </div>
       </div>
 
-      <button class="btn secondary" id="send213Btn" type="button">
-        Send 213
+      <button class="btn secondary" id="send251Btn" type="button">
+        Send 251
       </button>
-
 
       <button class="btn secondary" id="homeBtn" type="button">Home</button>
     </div>
@@ -833,48 +1523,7 @@ APP_HTML = r"""<!doctype html>
 <div class="shell">
 
   <div id="homeSection" class="section active">
-    <div class="grid2">
-
-      <div class="card">
-        <div class="h2">Mario preset</div>
-        <div class="muted">20 cubes (5×4). Order: 1,1 → 1,4 then 2,1 → 2,4 ... 5,4</div>
-        <div class="preview-wrap">
-          <div>
-            <div class="pill">Preview 12×15</div>
-            <div class="preview" id="marioPreview"></div>
-          </div>
-          <div style="min-width:240px;">
-            <div class="kpi">
-              <span class="pill" id="marioKpi"></span>
-              <span class="pill" id="lastPresetPill"></span>
-            </div>
-            <div class="hr"></div>
-            <button class="btn" type="button" id="startMarioBtn">Start Mario</button>
-            <div class="mini-note">If you previously ran Duck, you can choose Undo DUCK or Undo NONE before starting.</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="h2">Duck preset</div>
-        <div class="muted">20 cubes (5×4). Order: 1,1 → 1,4 then 2,1 → 2,4 ... 5,4</div>
-        <div class="preview-wrap">
-          <div>
-            <div class="pill">Preview 12×15</div>
-            <div class="preview" id="duckPreview"></div>
-          </div>
-          <div style="min-width:240px;">
-            <div class="kpi">
-              <span class="pill" id="duckKpi"></span>
-            </div>
-            <div class="hr"></div>
-            <button class="btn" type="button" id="startDuckBtn">Start Duck</button>
-            <div class="mini-note">If you previously ran Mario, you can choose Undo MARIO or Undo NONE before starting.</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
+    <div class="grid2" id="presetCards"></div>
 
     <div class="card" style="margin-top:12px;">
       <div class="h2">Global log</div>
@@ -1006,20 +1655,23 @@ APP_HTML = r"""<!doctype html>
     D: "DOWN",
   };
 
+  const PRESET_LIST = ["mario","duck","silly","bunny","parrot","penguin"];
+  const PRESET_DISPLAY = {
+    mario: "Mario",
+    duck: "Duck",
+    silly: "Silly Face",
+    bunny: "Bunny",
+    parrot: "Parrot",
+    penguin: "Penguin",
+  };
+
   const homeSection = document.getElementById("homeSection");
   const placeSection = document.getElementById("placeSection");
   const cubeSection = document.getElementById("cubeSection");
 
+  const presetCards = document.getElementById("presetCards");
   const subTitle = document.getElementById("subTitle");
 
-  const marioPreview = document.getElementById("marioPreview");
-  const duckPreview = document.getElementById("duckPreview");
-  const marioKpi = document.getElementById("marioKpi");
-  const duckKpi = document.getElementById("duckKpi");
-  const lastPresetPill = document.getElementById("lastPresetPill");
-
-  const startMarioBtn = document.getElementById("startMarioBtn");
-  const startDuckBtn = document.getElementById("startDuckBtn");
   const homeBtn = document.getElementById("homeBtn");
 
   const insertBtn = document.getElementById("insertBtn");
@@ -1030,7 +1682,7 @@ APP_HTML = r"""<!doctype html>
   const insertSidesBtn = document.getElementById("insertSidesBtn");
   const ejectSidesBtn = document.getElementById("ejectSidesBtn");
   const ejectBottomBtn = document.getElementById("ejectBottomBtn");
-  const send213Btn = document.getElementById("send213Btn");
+  const send251Btn = document.getElementById("send251Btn");
 
   const globalLog = document.getElementById("globalLog");
   const placeLog = document.getElementById("placeLog");
@@ -1070,8 +1722,7 @@ APP_HTML = r"""<!doctype html>
   const undoModalNote = document.getElementById("undoModalNote");
   const undoModalTitle = document.getElementById("undoModalTitle");
 
-  let marioPreset = null;
-  let duckPreset = null;
+  const presetCache = {};
 
   let activePresetName = null;
   let activePreset = null;
@@ -1150,16 +1801,18 @@ APP_HTML = r"""<!doctype html>
   ejectSidesBtn.addEventListener("click", () => sendBytes([221,232,221,232], "Eject sides"));
   ejectBottomBtn.addEventListener("click", () => sendBytes([213, 242, 214], "Eject bottom"));
 
-  send213Btn.addEventListener("click", () => {
-    sendBytes([213], "Turn 45");
+  send251Btn.addEventListener("click", () => {
+    sendBytes([251], "Trigger R&P");
   });
 
-
-  function renderPreview(container, grid12x15){
+  function renderPreview(container, grid){
     container.innerHTML = "";
-    for(let r=0; r<12; r++){
-      const row = grid12x15[r] || [];
-      for(let c=0; c<15; c++){
+    const ROWS = 15;
+    const COLS = 12;
+
+    for(let r = 0; r < ROWS; r++){
+      const row = grid[r] || [];
+      for(let c = 0; c < COLS; c++){
         const ch = (row[c] || ".").toLowerCase();
         const meta = COLOR_META[ch] || COLOR_META["."];
         const d = document.createElement("div");
@@ -1167,18 +1820,6 @@ APP_HTML = r"""<!doctype html>
         container.appendChild(d);
       }
     }
-  }
-
-  function setHomePills(){
-    marioKpi.textContent = "Mario: " + (marioPreset ? marioPreset.order.length : 0) + " cubes";
-    duckKpi.textContent = "Duck: " + (duckPreset ? duckPreset.order.length : 0) + " cubes";
-    lastPresetPill.textContent = "Last preset: " + (storedLastPresetName || "none");
-  }
-
-  async function fetchPreset(name){
-    const res = await fetch("/api/preset/" + name);
-    if(!res.ok) throw new Error("Failed to fetch preset " + name);
-    return await res.json();
   }
 
   function faceRow(face, col){
@@ -1201,35 +1842,135 @@ APP_HTML = r"""<!doctype html>
     orientationHint.textContent = hintText || "";
   }
 
+  async function fetchPreset(name){
+    const res = await fetch("/api/preset/" + name);
+    if(!res.ok) throw new Error("Failed to fetch preset " + name);
+    return await res.json();
+  }
+
+  async function ensurePresetLoaded(name){
+    if(presetCache[name]) return presetCache[name];
+    const p = await fetchPreset(name);
+    presetCache[name] = p;
+    return p;
+  }
+
+  function buildPresetCard(name){
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const h = document.createElement("div");
+    h.className = "h2";
+    h.textContent = PRESET_DISPLAY[name] || name;
+
+    const m = document.createElement("div");
+    m.className = "muted";
+    m.textContent = "20 cubes (5×4). Order: 1,1 → 1,4 then 2,1 → 2,4 ... 5,4";
+
+    const wrap = document.createElement("div");
+    wrap.className = "preview-wrap";
+
+    const left = document.createElement("div");
+    const pill = document.createElement("div");
+    pill.className = "pill";
+    pill.textContent = "Preview 12×15";
+    const preview = document.createElement("div");
+    preview.className = "preview";
+    preview.id = name + "Preview";
+    left.appendChild(pill);
+    left.appendChild(preview);
+
+    const right = document.createElement("div");
+    right.style.minWidth = "240px";
+
+    const kpi = document.createElement("div");
+    kpi.className = "kpi";
+    const kpiPill = document.createElement("span");
+    kpiPill.className = "pill";
+    kpiPill.id = name + "Kpi";
+    kpi.appendChild(kpiPill);
+
+    if(name === "mario"){
+      const last = document.createElement("span");
+      last.className = "pill";
+      last.id = "lastPresetPill";
+      kpi.appendChild(last);
+    }
+
+    const hr = document.createElement("div");
+    hr.className = "hr";
+
+    const btn = document.createElement("button");
+    btn.className = "btn";
+    btn.type = "button";
+    btn.textContent = "Start " + (PRESET_DISPLAY[name] || name);
+    btn.addEventListener("click", () => startPreset(name));
+
+    const note = document.createElement("div");
+    note.className = "mini-note";
+    note.textContent = "If you previously ran another preset, you can choose Undo (that preset) or Undo NONE before starting.";
+
+    right.appendChild(kpi);
+    right.appendChild(hr);
+    right.appendChild(btn);
+    right.appendChild(note);
+
+    wrap.appendChild(left);
+    wrap.appendChild(right);
+
+    card.appendChild(h);
+    card.appendChild(m);
+    card.appendChild(wrap);
+
+    return card;
+  }
+
+  function updateHomeKPIs(){
+    PRESET_LIST.forEach(name => {
+      const pill = document.getElementById(name + "Kpi");
+      if(pill){
+        const p = presetCache[name];
+        const count = p ? (p.order ? p.order.length : 0) : 0;
+        pill.textContent = (PRESET_DISPLAY[name] || name) + ": " + count + " cubes";
+      }
+    });
+
+    const lastPresetPill = document.getElementById("lastPresetPill");
+    if(lastPresetPill){
+      lastPresetPill.textContent = "Last preset: " + (storedLastPresetName || "none");
+    }
+  }
+
   function openUndoModal(forPresetName){
     pendingStartPresetName = forPresetName;
 
-    const last = storedLastPresetName || "";
-    let other = "";
-    if(forPresetName === "duck") other = "mario";
-    if(forPresetName === "mario") other = "duck";
-
     undoSelect.innerHTML = "";
+
     const optNone = document.createElement("option");
     optNone.value = "none";
     optNone.textContent = "Undo NONE";
     undoSelect.appendChild(optNone);
 
-    const shouldOfferOther = (last === other);
-    if(shouldOfferOther){
-      const optOther = document.createElement("option");
-      optOther.value = other;
-      optOther.textContent = "Undo " + other.toUpperCase();
-      undoSelect.appendChild(optOther);
-      undoModalNote.textContent = "Last preset is " + other.toUpperCase() + ". Choose Undo " + other.toUpperCase() + " to run cube-by-cube UNDO before making " + forPresetName.toUpperCase() + ".";
-    }else if(last){
-      undoModalNote.textContent = "Last preset is " + last.toUpperCase() + ". No undo option shown because it does not match the required counterpart.";
+    const last = (storedLastPresetName || "").toLowerCase().trim();
+    if(last && last !== forPresetName){
+      const optLast = document.createElement("option");
+      optLast.value = last;
+      optLast.textContent = "Undo " + last.toUpperCase();
+      undoSelect.appendChild(optLast);
+
+      undoModalNote.textContent =
+        "Last preset is " + last.toUpperCase() +
+        ". Choose Undo " + last.toUpperCase() +
+        " to run cube-by-cube UNDO before making " + forPresetName.toUpperCase() + ".";
+    }else if(last && last === forPresetName){
+      undoModalNote.textContent =
+        "Last preset is the same (" + last.toUpperCase() + "). Undo is optional; you can also choose Undo NONE.";
     }else{
       undoModalNote.textContent = "No previous preset stored. You can start immediately.";
     }
 
-    undoModalTitle.textContent = "Choose undo for " + forPresetName.toUpperCase();
-    undoModalSubtitle.textContent = "Select what to undo before starting " + forPresetName.toUpperCase() + ".";
+    undoModalTitle.textContent = "Choose undo for " + (forPresetName.toUpperCase());
+    undoModalSubtitle.textContent = "Select what to undo before starting " + (forPresetName.toUpperCase()) + ".";
     undoModalBackdrop.classList.add("open");
     undoModalBackdrop.setAttribute("aria-hidden", "false");
   }
@@ -1254,7 +1995,7 @@ APP_HTML = r"""<!doctype html>
     }
 
     let chosenUndo = "";
-    if(choice === "mario" || choice === "duck"){
+    if(choice && choice !== "none" && choice !== startName){
       chosenUndo = choice;
     }else{
       chosenUndo = "";
@@ -1265,26 +2006,21 @@ APP_HTML = r"""<!doctype html>
   });
 
   async function startPreset(name){
-    const last = storedLastPresetName || "";
-    const other = (name === "duck") ? "mario" : "duck";
-
+    const last = (storedLastPresetName || "").toLowerCase().trim();
     if(last){
       openUndoModal(name);
       return;
     }
-
     await startPresetWithUndoChoice(name, "");
   }
 
   async function startPresetWithUndoChoice(name, undoChoice){
     activePresetName = name;
-    activePreset = (name === "mario") ? marioPreset : duckPreset;
+    activePreset = await ensurePresetLoaded(name);
     idx = 0;
 
     undoFromPreset = "";
-
-    const other = (name === "duck") ? "mario" : "duck";
-    if(undoChoice && (undoChoice === other) && storedLastPresetName === other){
+    if(undoChoice && undoChoice !== name && storedLastPresetName === undoChoice){
       undoFromPreset = undoChoice;
       phase = "undo";
     }else{
@@ -1337,7 +2073,7 @@ APP_HTML = r"""<!doctype html>
     }else{
       renderOrientation(currentEntry.orientation, "Place cube to match this orientation for MAKE.");
       if(!currentEntry.orientation){
-        logAll("Note: no orientation for this entry (might be already-solved).");
+        logAll("Note: no orientation for this entry (might be already-solved or placeholder).");
       }
     }
   }
@@ -1434,13 +2170,10 @@ APP_HTML = r"""<!doctype html>
     storedLastPresetName = activePresetName;
     localStorage.setItem("lastPresetName", activePresetName);
     logAll("Finished preset: " + activePresetName + ". Stored as lastPresetName.");
-    setHomePills();
+    updateHomeKPIs();
     show(homeSection);
     subTitle.textContent = "Home";
   }
-
-  startMarioBtn.addEventListener("click", () => startPreset("mario"));
-  startDuckBtn.addEventListener("click", () => startPreset("duck"));
 
   homeBtn.addEventListener("click", () => {
     show(homeSection);
@@ -1475,13 +2208,16 @@ APP_HTML = r"""<!doctype html>
 
   async function init(){
     try{
-      marioPreset = await fetchPreset("mario");
-      duckPreset = await fetchPreset("duck");
+      presetCards.innerHTML = "";
+      PRESET_LIST.forEach(name => presetCards.appendChild(buildPresetCard(name)));
 
-      renderPreview(marioPreview, marioPreset.preview_12x15);
-      renderPreview(duckPreview, duckPreset.preview_12x15);
+      for(const name of PRESET_LIST){
+        const p = await ensurePresetLoaded(name);
+        const prev = document.getElementById(name + "Preview");
+        renderPreview(prev, p.preview_15x12);
+      }
 
-      setHomePills();
+      updateHomeKPIs();
       logTo(globalLog, "Ready. Detected lastPresetName: " + (storedLastPresetName || "none"));
     }catch(e){
       logTo(globalLog, "ERROR loading presets: " + e);
@@ -1493,6 +2229,7 @@ APP_HTML = r"""<!doctype html>
 </body>
 </html>
 """
+
 
 class CubeHandler(BaseHTTPRequestHandler):
     def _set_headers(self, status=200, content_type="text/html; charset=utf-8"):
@@ -1507,7 +2244,7 @@ class CubeHandler(BaseHTTPRequestHandler):
             return
 
         if self.path.startswith("/api/preset/"):
-            name = self.path.split("/")[-1].strip()
+            name = self.path.split("/")[-1].strip().lower()
             if name not in PRESETS:
                 self._set_headers(404, "application/json; charset=utf-8")
                 self.wfile.write(json.dumps({"error": "Preset not found"}).encode("utf-8"))
@@ -1541,7 +2278,7 @@ class CubeHandler(BaseHTTPRequestHandler):
         if self.path == "/api/undo_info":
             try:
                 data = json.loads(body.decode("utf-8"))
-                prev_preset = (data.get("prev_preset") or "").strip()
+                prev_preset = (data.get("prev_preset") or "").strip().lower()
                 pos = (data.get("pos") or "").strip()
 
                 if not prev_preset or prev_preset not in PRESETS:
@@ -1572,14 +2309,14 @@ class CubeHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"Not found")
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:
+def run_server(host: str = "0.0.0.0", port: int = 5000) -> None:
     server = HTTPServer((host, port), CubeHandler)
     ip = get_local_ip()
     url = f"http://{ip}:{port}"
     print_qr(url)
     print("\nServing on", url)
     print("Home: /")
-    print("API:  /api/preset/mario , /api/preset/duck")
+    print("API:  /api/preset/<name>  where name in:", ", ".join(sorted(PRESETS.keys())))
     print("API:  POST /api/send_bytes   {bytes:[...]}  (bytes only, waits for DONE after each byte)")
     print("API:  POST /api/undo_info    {prev_preset:'mario', pos:'1,1'}")
     print("Press Ctrl+C to stop.")
