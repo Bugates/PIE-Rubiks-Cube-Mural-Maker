@@ -256,11 +256,11 @@ def key_rc(r: int, c: int) -> str:
     return f"{r},{c}"
 
 
-INSERT_BOTTOM = [241]
+INSERT_BOTTOM = [242]
 INSERT_SIDES  = [221, 231, 221, 231]
 
 EJECT_SIDES   = [222, 232, 222, 232]
-EJECT_BOTTOM  = [213, 242, 214]
+EJECT_BOTTOM  = [213, 241, 214]
 
 
 VALID_COLS = set(["w", "r", "o", "b", "g", "y", "."])
@@ -1473,7 +1473,7 @@ APP_HTML = r"""<!doctype html>
       <div class="dropdown">
         <button class="btn secondary" id="insertBtn" type="button">Insert ▾</button>
         <div class="menu" id="insertMenu">
-          <button class="btn secondary" type="button" id="insertBottomBtn">Insert bottom (241)</button>
+          <button class="btn secondary" type="button" id="insertBottomBtn">Insert bottom (242)</button>
           <button class="btn secondary" type="button" id="insertSidesBtn">Insert sides (221,231,221,231)</button>
           <div class="mini-note">Always available. Sends bytes to all detected ports, waits for DONE after each byte.</div>
         </div>
@@ -1483,7 +1483,7 @@ APP_HTML = r"""<!doctype html>
         <button class="btn secondary" id="ejectBtn" type="button">Eject ▾</button>
         <div class="menu" id="ejectMenu">
           <button class="btn secondary" type="button" id="ejectSidesBtn">Eject sides (222,232,222,232)</button>
-          <button class="btn secondary" type="button" id="ejectBottomBtn">Eject bottom (213, 242, 214)</button>
+          <button class="btn secondary" type="button" id="ejectBottomBtn">Eject bottom (213, 241, 214)</button>
           <div class="mini-note">Always available.</div>
         </div>
       </div>
@@ -1795,11 +1795,11 @@ APP_HTML = r"""<!doctype html>
     }
   }
 
-  insertBottomBtn.addEventListener("click", () => sendBytes([241], "Insert bottom"));
+  insertBottomBtn.addEventListener("click", () => sendBytes([242], "Insert bottom"));
   insertSidesBtn.addEventListener("click", () => sendBytes([221,231,221,231], "Insert sides"));
 
   ejectSidesBtn.addEventListener("click", () => sendBytes([222,232,222,232], "Eject sides"));
-  ejectBottomBtn.addEventListener("click", () => sendBytes([213, 242, 214], "Eject bottom"));
+  ejectBottomBtn.addEventListener("click", () => sendBytes([213, 241, 214], "Eject bottom"));
 
   send251Btn.addEventListener("click", () => {
     sendBytes([251], "Trigger R&P");
