@@ -278,3 +278,62 @@ main{
   .cube.spin{animation:none}
   .pageHeading{opacity:1;transform:none}
 }
+
+/* Team */
+.grid { padding: 1.25rem 0; }
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.sub-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.6rem;
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.9rem;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  transition: transform .18s ease, box-shadow .18s ease;
+  cursor: pointer;
+  outline: none;
+}
+
+
+.sub-photo {
+  width: clamp(120px, 20vw, 220px);
+  height: clamp(120px, 20vw, 220px);
+  object-fit: cover;
+  border-radius: 50%;
+  border: 4px solid rgba(0,0,0,0.06);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  flex-shrink: 0;
+}
+
+.sub-info h3 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.role {
+  margin: 0.15rem 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.bio {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: #444;
+  max-width: 18rem;
+}
+
+@media (max-width: 420px) {
+  .sub-photo { width: 72px; height: 72px; }
+  .bio { max-width: 14rem; }
+}
