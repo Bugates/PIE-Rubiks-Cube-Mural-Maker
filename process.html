@@ -9,7 +9,7 @@
   <style>
     .timeline{
       position:relative;
-      max-width:800px;
+      max-width:900px;
       margin:60px auto;
       padding:40px 0;
     }
@@ -32,7 +32,7 @@
       margin:80px 0;
       opacity:0;
       transform:translateY(40px);
-      transition:opacity .6s ease, transform .6s ease;
+      transition:opacity .7s ease, transform .7s ease;
     }
 
     .timeline-item.visible{
@@ -54,13 +54,13 @@
       background:#fff;
       border:1px solid var(--borderSoft);
       border-radius:14px;
-      padding:18px 22px;
+      padding:20px 24px;
       box-shadow:var(--shadowSoft);
-      max-width:320px;
+      max-width:400px;
     }
 
     .content h3{
-      margin:0 0 6px;
+      margin:0 0 8px;
       font-size:16px;
     }
 
@@ -68,7 +68,7 @@
       margin:0;
       font-size:14px;
       color:var(--muted);
-      line-height:1.5;
+      line-height:1.65;
     }
 
     .cube-wrap{
@@ -78,11 +78,20 @@
       perspective:800px;
     }
 
-css/style.css
-.cube{
-  transform: rotateX(-24deg) rotateY(30deg);
-}
+    .cube{
+      width:48px;
+      height:48px;
+      position:relative;
+      transform-style:preserve-3d;
+      transform:rotateX(-24deg) rotateY(30deg) scale(0.85);
+      opacity:0;
+      transition:opacity .7s ease, transform .7s ease;
+    }
 
+    .timeline-item.visible .cube{
+      opacity:1;
+      transform:rotateX(-24deg) rotateY(30deg) scale(1);
+    }
 
     .cube-face{
       position:absolute;
@@ -97,9 +106,7 @@ css/style.css
       border-radius:6px;
     }
 
-    .cube-face span{
-      border-radius:2px;
-    }
+    .cube-face span{border-radius:2px}
 
     .front{transform:translateZ(24px)}
     .back{transform:rotateY(180deg) translateZ(24px)}
@@ -117,9 +124,7 @@ css/style.css
 
     @media (max-width:760px){
       .timeline-line{left:32px}
-      .timeline-item{
-        grid-template-columns:80px 1fr;
-      }
+      .timeline-item{grid-template-columns:80px 1fr}
       .cube-wrap{grid-column:1}
       .content{grid-column:2;text-align:left}
     }
@@ -147,7 +152,7 @@ css/style.css
 <div class="container hero">
   <div class="headingRow">
     <div class="cubeInline"><div id="cubeMount"></div></div>
-    <h1 class="pageHeading">ROCESS</h1>
+    <h1 class="pageHeading">PROCESS</h1>
   </div>
 </div>
 
@@ -161,8 +166,10 @@ css/style.css
 
     <div class="timeline-item left">
       <div class="content">
-        <h3>Ideation</h3>
-        <p>Exploring mural concepts and defining system constraints.</p>
+        <h3>Ideation and Scoping</h3>
+        <p>
+          At the start of the project, we considered building a fully autonomous Rubik’s Cube solver that could scan any cube configuration and generate a solution in real time. While this idea was compelling, early research and discussion made it clear that this approach would demand complex vision pipelines, tight mechanical tolerances, and extensive debugging time. Given the limited budget and timeline, we narrowed the scope to focus on predefined mural patterns. This decision allowed us to emphasize reliability, visual impact, and system integration rather than algorithmic optimality.
+        </p>
       </div>
       <div class="cube-wrap">
         <div class="cube">
@@ -188,8 +195,48 @@ css/style.css
         </div>
       </div>
       <div class="content">
-        <h3>Prototyping</h3>
-        <p>Building and testing early mechanical and software prototypes.</p>
+        <h3>Prototyping and Trade-offs</h3>
+        <p>
+          Early mechanical prototypes used stationary motor mounts that required manual adjustment to insert and remove the cube. Although simple, this design limited autonomy and made repeated demonstrations slow and error prone. Through iterative testing, we transitioned to pulley driven motor mounts that could automatically engage and disengage the cube. We also tested lead screw based mechanisms for lateral motion, but friction, space constraints, and interference with other subsystems led us to favor pulleys for their compactness and smoother operation.
+        </p>
+      </div>
+    </div>
+
+    <div class="timeline-item left">
+      <div class="content">
+        <h3>System Integration</h3>
+        <p>
+          As subsystems came together, integration exposed challenges in synchronization and failure recovery. Initial approaches relied on managing individual serial connections, which proved fragile as hardware configurations changed. We instead adopted a broadcast communication model in which all controllers receive commands and filter them by board ID. Combined with explicit software state tracking and undo logic, this approach reduced accumulated error and improved robustness during repeated executions.
+        </p>
+      </div>
+      <div class="cube-wrap">
+        <div class="cube">
+          <div class="cube-face front"><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span></div>
+          <div class="cube-face back"><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span></div>
+          <div class="cube-face right"><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span></div>
+          <div class="cube-face left"><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span></div>
+          <div class="cube-face top"><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span></div>
+          <div class="cube-face bottom"><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="timeline-item right">
+      <div class="cube-wrap">
+        <div class="cube">
+          <div class="cube-face front"><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span></div>
+          <div class="cube-face back"><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span></div>
+          <div class="cube-face right"><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span></div>
+          <div class="cube-face left"><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span></div>
+          <div class="cube-face top"><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span></div>
+          <div class="cube-face bottom"><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span></div>
+        </div>
+      </div>
+      <div class="content">
+        <h3>Refinement and Final Design</h3>
+        <p>
+          The final system reflects a deliberate shift toward determinism and repeatability. By relying on offline planning and precomputed move sequences, we reduced runtime complexity and improved reliability. This approach allowed us to consistently produce visually compelling mural patterns while staying within the project’s mechanical, electrical, and temporal constraints.
+        </p>
       </div>
     </div>
 
@@ -197,18 +244,17 @@ css/style.css
 </section>
 
 <div class="footer">PIE Final · Process</div>
+
 </main>
 
 <script src="js/nav.js"></script>
 <script src="js/cube.js"></script>
 
 <script>
-  const items = document.querySelectorAll('.timeline-item');
-  const observer = new IntersectionObserver(entries=>{
-    entries.forEach(e=>{
-      if(e.isIntersecting) e.target.classList.add('visible');
-    });
-  },{threshold:0.25});
+  const items=document.querySelectorAll('.timeline-item');
+  const observer=new IntersectionObserver(e=>{
+    e.forEach(i=>{if(i.isIntersecting)i.target.classList.add('visible')});
+  },{threshold:.25});
   items.forEach(i=>observer.observe(i));
 </script>
 

@@ -6,6 +6,7 @@
   <title>Overview</title>
   <link rel="stylesheet" href="css/style.css?v=FINAL">
 </head>
+
 <body data-letter="O">
 
 <header class="topbar">
@@ -26,32 +27,91 @@
 </header>
 
 <div class="container hero">
-    <div class="headingRow">
-      <div class="cubeInline"><div id="cubeMount"></div></div>
-      <h1 class="pageHeading">VERVIEW</h1>
+  <div class="headingRow">
+    <div class="cubeInline">
+      <div id="cubeMount"></div>
     </div>
+    <h1 class="pageHeading">OVERVIEW</h1>
+  </div>
 </div>
 
 <main class="container">
 
   <section class="card section">
+    <h2>Project Overview</h2>
+    <p>
+      RUBLING is a robotic Rubik’s Cube mural system designed to physically generate
+      predefined visual patterns using an electromechanical cube manipulation platform.
+      Rather than focusing on optimal or fully general cube solving, this project
+      emphasizes reliable execution, repeatability, and clear coordination between
+      software, electronics, and mechanical subsystems.
+    </p>
+    <p>
+      The system accepts user-selected patterns and autonomously performs the
+      corresponding sequence of cube face rotations to produce recognizable designs.
+      This approach allows the system to function as a robust demonstration platform
+      while remaining within realistic budget, time, and integration constraints.
+    </p>
+  </section>
+
+  <section class="card section">
     <h2>Project Objectives</h2>
+    <p>
+      The primary objective of this project was to design and build an integrated
+      robotic system capable of reliably transforming a Rubik’s Cube into predefined
+      patterns without manual intervention. Achieving this required careful balancing
+      of mechanical design, electrical control, and software coordination.
+    </p>
+    <p>
+      Additional objectives included minimizing mechanical failure modes, maintaining
+      deterministic system behavior, and creating a user-facing interface that allows
+      patterns to be selected and executed consistently during live demonstrations.
+    </p>
   </section>
 
   <section class="card section">
     <h2>Final System Demonstration</h2>
-    <p> Image of the final system that we will demo</p>
-    <p2> text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text </p2>
+    <p>
+      The final system consists of a motorized frame that engages five faces of a
+      Rubik’s Cube using stepper motors and custom mounts. A Raspberry Pi serves as
+      the central controller, coordinating communication between the user interface
+      and multiple Arduino microcontrollers responsible for motor execution.
+    </p>
+    <p>
+      During a demonstration, a user selects a target pattern through the software
+      interface. The system then executes a precomputed sequence of cube rotations,
+      transmitting synchronized commands to the hardware layer. This process produces
+      consistent visual results across repeated runs and highlights the system’s
+      emphasis on reliability and predictability.
+    </p>
   </section>
 
   <section class="card section">
     <h2>Design Process Summary</h2>
+    <p>
+      The design process followed an iterative and constraint-driven approach, with
+      mechanical, electrical, and software decisions evolving together through
+      prototyping and testing. Early concepts explored real-time solving and vision-
+      based feedback, but these approaches were scaled back as their complexity and
+      integration risk became apparent.
+    </p>
+    <p>
+      Through successive iterations, the team prioritized solutions that reduced
+      system fragility and improved repeatability. The final design reflects these
+      trade-offs, resulting in a system that is well-suited for demonstration,
+      maintainable within the project timeline, and clearly communicates the
+      engineering decisions behind its construction.
+    </p>
   </section>
 
-  <div class="footer">PIE Final · Overview</div>
+  <div class="footer">
+    PIE Final · Overview
+  </div>
+
 </main>
 
 <script src="js/nav.js"></script>
 <script src="js/cube.js"></script>
+
 </body>
 </html>
