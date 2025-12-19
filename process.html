@@ -5,16 +5,137 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Process</title>
   <link rel="stylesheet" href="css/style.css?v=FINAL">
+
+  <style>
+    .timeline{
+      position:relative;
+      max-width:800px;
+      margin:60px auto;
+      padding:40px 0;
+    }
+
+    .timeline-line{
+      position:absolute;
+      left:50%;
+      top:0;
+      width:4px;
+      height:100%;
+      background:linear-gradient(to bottom, var(--borderSoft), var(--blue));
+      transform:translateX(-50%);
+    }
+
+    .timeline-item{
+      position:relative;
+      display:grid;
+      grid-template-columns:1fr 80px 1fr;
+      align-items:center;
+      margin:80px 0;
+      opacity:0;
+      transform:translateY(40px);
+      transition:opacity .6s ease, transform .6s ease;
+    }
+
+    .timeline-item.visible{
+      opacity:1;
+      transform:translateY(0);
+    }
+
+    .timeline-item.left .content{
+      grid-column:1;
+      text-align:right;
+    }
+
+    .timeline-item.right .content{
+      grid-column:3;
+      text-align:left;
+    }
+
+    .content{
+      background:#fff;
+      border:1px solid var(--borderSoft);
+      border-radius:14px;
+      padding:18px 22px;
+      box-shadow:var(--shadowSoft);
+      max-width:320px;
+    }
+
+    .content h3{
+      margin:0 0 6px;
+      font-size:16px;
+    }
+
+    .content p{
+      margin:0;
+      font-size:14px;
+      color:var(--muted);
+      line-height:1.5;
+    }
+
+    .cube-wrap{
+      grid-column:2;
+      display:flex;
+      justify-content:center;
+      perspective:800px;
+    }
+
+    .cube{
+      width:48px;
+      height:48px;
+      position:relative;
+      transform-style:preserve-3d;
+      transform:rotateX(-25deg) rotateY(35deg);
+    }
+
+    .cube-face{
+      position:absolute;
+      width:48px;
+      height:48px;
+      background:#000;
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      grid-template-rows:repeat(3,1fr);
+      gap:2px;
+      padding:4px;
+      border-radius:6px;
+    }
+
+    .cube-face span{
+      border-radius:2px;
+    }
+
+    .front{transform:translateZ(24px)}
+    .back{transform:rotateY(180deg) translateZ(24px)}
+    .right{transform:rotateY(90deg) translateZ(24px)}
+    .left{transform:rotateY(-90deg) translateZ(24px)}
+    .top{transform:rotateX(90deg) translateZ(24px)}
+    .bottom{transform:rotateX(-90deg) translateZ(24px)}
+
+    .w{background:#fff}
+    .y{background:#ffd500}
+    .r{background:#c41e3a}
+    .o{background:#ff5800}
+    .b{background:#0051ba}
+    .g{background:#009e60}
+
+    @media (max-width:760px){
+      .timeline-line{left:32px}
+      .timeline-item{
+        grid-template-columns:80px 1fr;
+      }
+      .cube-wrap{grid-column:1}
+      .content{grid-column:2;text-align:left}
+    }
+  </style>
 </head>
+
 <body data-letter="P">
 
 <header class="topbar">
   <div class="container navwrap">
-    <div class="brand">RUBLING</div>
+    <div class="brand">TEAM RUBLING PIE FINAL '25</div>
     <nav class="navlinks">
       <a href="index.html">Overview</a>
       <a href="system.html">System</a>
-      <a href="team.html">Team</a>
       <a href="flow.html">Flow</a>
       <a href="electrical.html">Electrical</a>
       <a href="mechanical.html">Mechanical</a>
@@ -26,30 +147,72 @@
 </header>
 
 <div class="container hero">
-    <div class="headingRow">
-      <div class="cubeInline"><div id="cubeMount"></div></div>
-      <h1 class="pageHeading">ROCESS</h1>
-    </div>
+  <div class="headingRow">
+    <div class="cubeInline"><div id="cubeMount"></div></div>
+    <h1 class="pageHeading">ROCESS</h1>
+  </div>
 </div>
 
 <main class="container">
 
-  <section class="card section">
-    <h2>Design Iterations</h2>
-  </section>
+<section class="card section">
+  <h2>Design Process Timeline</h2>
 
-  <section class="card section">
-    <h2>Trade-offs and Decisions</h2>
-  </section>
+  <div class="timeline">
+    <div class="timeline-line"></div>
 
-  <section class="card section">
-    <h2>Lessons Learned</h2>
-  </section>
+    <div class="timeline-item left">
+      <div class="content">
+        <h3>Ideation</h3>
+        <p>Exploring mural concepts and defining system constraints.</p>
+      </div>
+      <div class="cube-wrap">
+        <div class="cube">
+          <div class="cube-face front"><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span></div>
+          <div class="cube-face back"><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span></div>
+          <div class="cube-face right"><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span></div>
+          <div class="cube-face left"><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span></div>
+          <div class="cube-face top"><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span></div>
+          <div class="cube-face bottom"><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span></div>
+        </div>
+      </div>
+    </div>
 
-  <div class="footer">PIE Final · Process</div>
+    <div class="timeline-item right">
+      <div class="cube-wrap">
+        <div class="cube">
+          <div class="cube-face front"><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span><span class="b"></span></div>
+          <div class="cube-face back"><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span><span class="o"></span></div>
+          <div class="cube-face right"><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span><span class="y"></span></div>
+          <div class="cube-face left"><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span><span class="g"></span></div>
+          <div class="cube-face top"><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span><span class="r"></span></div>
+          <div class="cube-face bottom"><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span><span class="w"></span></div>
+        </div>
+      </div>
+      <div class="content">
+        <h3>Prototyping</h3>
+        <p>Building and testing early mechanical and software prototypes.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="footer">PIE Final · Process</div>
 </main>
 
 <script src="js/nav.js"></script>
 <script src="js/cube.js"></script>
+
+<script>
+  const items = document.querySelectorAll('.timeline-item');
+  const observer = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting) e.target.classList.add('visible');
+    });
+  },{threshold:0.25});
+  items.forEach(i=>observer.observe(i));
+</script>
+
 </body>
 </html>
