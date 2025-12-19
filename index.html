@@ -5,6 +5,115 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Overview</title>
   <link rel="stylesheet" href="css/style.css?v=FINAL">
+
+  <style>
+    .heroStage{
+      position:relative;
+      height:560px;
+      overflow:hidden;
+      border-radius:18px;
+      background:#000;
+    }
+
+    .heroSlider{
+      position:absolute;
+      inset:0;
+    }
+
+    .slides{
+      width:100%;
+      height:100%;
+      position:relative;
+    }
+
+    .slide{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      transition:opacity .8s ease;
+    }
+
+    .slide.active{
+      opacity:1;
+      z-index:1;
+    }
+
+    .slide img,
+    .slide video{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+    }
+
+    .heroOverlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      gap:18px;
+      background:radial-gradient(circle at center, rgba(0,0,0,.35), rgba(0,0,0,.6));
+      z-index:3;
+      transition:opacity .8s ease, transform .8s ease;
+    }
+
+    .heroOverlay.hidden{
+      opacity:0;
+      transform:scale(.96);
+      pointer-events:none;
+    }
+
+    .heroTitle{
+      color:#fff;
+      font-size:64px;
+      font-weight:800;
+      letter-spacing:.18em;
+    }
+
+    .sliderControls{
+      position:absolute;
+      bottom:22px;
+      left:50%;
+      transform:translateX(-50%);
+      display:flex;
+      gap:10px;
+      z-index:4;
+    }
+
+    .dot{
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      background:rgba(255,255,255,.4);
+      cursor:pointer;
+    }
+
+    .dot.active{
+      background:#fff;
+    }
+
+    .arrow{
+      position:absolute;
+      top:50%;
+      transform:translateY(-50%);
+      width:46px;
+      height:46px;
+      border-radius:50%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:28px;
+      color:#fff;
+      background:rgba(0,0,0,.45);
+      cursor:pointer;
+      z-index:4;
+      user-select:none;
+    }
+
+    .arrow.left{left:18px}
+    .arrow.right{right:18px}
+  </style>
 </head>
 
 <body data-letter="O">
@@ -27,91 +136,102 @@
 </header>
 
 <div class="container hero">
-  <div class="headingRow">
-    <div class="cubeInline">
-      <div id="cubeMount"></div>
+  <div class="heroStage">
+
+    <div class="heroSlider">
+      <div class="slides">
+
+        <div class="slide active">
+          <video autoplay muted loop playsinline>
+            <source src="media/overview/7eae91cf-fb0e-4a40-8546-50fbf7504b95 (1).mp4" type="video/mp4">
+          </video>
+        </div>
+
+        <div class="slide">
+          <img src="media/overview/WhatsApp Image 2025-12-19 at 11.19.34 AM (1).jpeg">
+        </div>
+
+        <div class="slide">
+          <img src="media/overview/WhatsApp Image 2025-12-19 at 11.19.34 AM.jpeg">
+        </div>
+
+        <div class="slide">
+          <img src="media/overview/WhatsApp Image 2025-12-19 at 11.19.35 AM.jpeg">
+        </div>
+
+      </div>
+
+      <div class="arrow left" id="prev">&#10094;</div>
+      <div class="arrow right" id="next">&#10095;</div>
+      <div class="sliderControls" id="dots"></div>
     </div>
-    <h1 class="pageHeading">VERVIEW</h1>
+
+    <div class="heroOverlay" id="heroOverlay">
+      <div id="cubeMount"></div>
+      <div class="heroTitle">OVERVIEW</div>
+    </div>
+
   </div>
 </div>
 
 <main class="container">
 
-  <section class="card section">
-    <h2>Project Overview</h2>
-    <p>
-      RUBLING is a robotic Rubik’s Cube mural system designed to physically generate
-      predefined visual patterns using an electromechanical cube manipulation platform.
-      Rather than focusing on optimal or fully general cube solving, this project
-      emphasizes reliable execution, repeatability, and clear coordination between
-      software, electronics, and mechanical subsystems.
-    </p>
-    <p>
-      The system accepts user-selected patterns and autonomously performs the
-      corresponding sequence of cube face rotations to produce recognizable designs.
-      This approach allows the system to function as a robust demonstration platform
-      while remaining within realistic budget, time, and integration constraints.
-    </p>
-  </section>
+<section class="card section">
+  <h2>Project Overview</h2>
+  <p>
+    RUBLING is a robotic Rubik’s Cube mural system built to physically produce
+    predefined visual patterns through coordinated mechanical motion. Rather than
+    solving arbitrary cube states, the system focuses on executing carefully planned
+    sequences with consistency and reliability.
+  </p>
+  <p>
+    A Raspberry Pi coordinates high level control and user interaction, while
+    multiple microcontrollers handle precise motor execution. This division allows
+    the system to remain predictable during demonstrations while clearly exposing
+    the mechanical and software decisions behind its design.
+  </p>
+</section>
 
-  <section class="card section">
-    <h2>Project Objectives</h2>
-    <p>
-      The primary objective of this project was to design and build an integrated
-      robotic system capable of reliably transforming a Rubik’s Cube into predefined
-      patterns without manual intervention. Achieving this required careful balancing
-      of mechanical design, electrical control, and software coordination.
-    </p>
-    <p>
-      Additional objectives included minimizing mechanical failure modes, maintaining
-      deterministic system behavior, and creating a user-facing interface that allows
-      patterns to be selected and executed consistently during live demonstrations.
-    </p>
-  </section>
-
-  <section class="card section">
-    <h2>Final System Demonstration</h2>
-    <p>
-      The final system consists of a motorized frame that engages five faces of a
-      Rubik’s Cube using stepper motors and custom mounts. A Raspberry Pi serves as
-      the central controller, coordinating communication between the user interface
-      and multiple Arduino microcontrollers responsible for motor execution.
-    </p>
-    <p>
-      During a demonstration, a user selects a target pattern through the software
-      interface. The system then executes a precomputed sequence of cube rotations,
-      transmitting synchronized commands to the hardware layer. This process produces
-      consistent visual results across repeated runs and highlights the system’s
-      emphasis on reliability and predictability.
-    </p>
-  </section>
-
-  <section class="card section">
-    <h2>Design Process Summary</h2>
-    <p>
-      The design process followed an iterative and constraint-driven approach, with
-      mechanical, electrical, and software decisions evolving together through
-      prototyping and testing. Early concepts explored real-time solving and vision-
-      based feedback, but these approaches were scaled back as their complexity and
-      integration risk became apparent.
-    </p>
-    <p>
-      Through successive iterations, the team prioritized solutions that reduced
-      system fragility and improved repeatability. The final design reflects these
-      trade-offs, resulting in a system that is well-suited for demonstration,
-      maintainable within the project timeline, and clearly communicates the
-      engineering decisions behind its construction.
-    </p>
-  </section>
-
-  <div class="footer">
-    PIE Final · Overview
-  </div>
+<div class="footer">PIE Final · Overview</div>
 
 </main>
 
 <script src="js/nav.js"></script>
 <script src="js/cube.js"></script>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const dotsWrap=document.getElementById('dots');
+  let index=0;
+
+  slides.forEach((_,i)=>{
+    const d=document.createElement('div');
+    d.className='dot'+(i===0?' active':'');
+    d.onclick=()=>goTo(i);
+    dotsWrap.appendChild(d);
+  });
+
+  const dots=[...document.querySelectorAll('.dot')];
+
+  function goTo(i){
+    slides[index].classList.remove('active');
+    dots[index].classList.remove('active');
+    index=(i+slides.length)%slides.length;
+    slides[index].classList.add('active');
+    dots[index].classList.add('active');
+    const v=slides[index].querySelector('video');
+    if(v){v.play()}
+  }
+
+  document.getElementById('next').onclick=()=>goTo(index+1);
+  document.getElementById('prev').onclick=()=>goTo(index-1);
+
+  setInterval(()=>goTo(index+1), 7000);
+
+  setTimeout(()=>{
+    document.getElementById('heroOverlay').classList.add('hidden');
+  }, 2200);
+</script>
 
 </body>
 </html>
