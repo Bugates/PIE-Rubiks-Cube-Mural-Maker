@@ -451,3 +451,26 @@ main{
   font-weight:600;
   cursor:pointer;
 }
+
+.timeline .cube-wrap{
+  perspective:800px;
+  transform-style:preserve-3d;
+}
+
+.timeline .cube{
+  transform-style:preserve-3d;
+}
+
+.timeline .cube-face{
+  backface-visibility:visible;
+  transform-style:preserve-3d;
+}
+
+.timeline .cube-face.front,
+.timeline .cube-face.back,
+.timeline .cube-face.left,
+.timeline .cube-face.right,
+.timeline .cube-face.top,
+.timeline .cube-face.bottom{
+  position:absolute;
+}
