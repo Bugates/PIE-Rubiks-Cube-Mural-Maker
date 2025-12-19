@@ -86,6 +86,45 @@
     </article>
 
   </section>
+  
+<section class="card section"><h1>Key Design Decisions</h1></section>
+
+<section class="card section two-column single-image">
+  <div class="card-left">
+    <img src="media/two_motor.jpeg" class="card-img">
+  </div>
+  <div class="card-right">
+    <h2>Two-motor set up</h2>
+    <p>
+      We started with testing two motors controlled by one Arduino to determine timing and latency. After experimenting with a variety of delay mechanisms in the code, we were able to finalize the delay 
+      between microsteps and between the two motors moving.
+    </p>
+  </div>
+  </section>
+<section class="card section two-column single-image">
+  <div class="card-left">
+    <img src="media/five_motor.jpeg" class="card-img">
+  </div>
+  <div class="card-right">
+    <h2>Five-motor set up</h2>
+    <p>
+      Expanding to 5 motors required adding a second Arduino and communication with the Raspi. In Phase 2 and 3 we iteated on communication
+      protocols (as seen in the software page). 
+    </p>
+  </div>
+  </section>
+
+  <section class="card section two-column single-image">
+  <div class="card-left">
+    <img src="media/final_motor_connections.jpeg" class="card-img">
+  </div>
+  <div class="card-right">
+    <h2>Final wiring</h2>
+    <p>
+      Pictured here is the final wiring setup without the motors pugged in. We use 8 drivers and 2 arduinos that connect to the raspi and the power rail.
+    </p>
+  </div>
+  </section>
 
   <div class="footer">PIE Final · Electrical</div>
 </main>

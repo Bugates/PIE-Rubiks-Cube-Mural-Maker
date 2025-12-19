@@ -481,19 +481,37 @@ main{
   align-items: flex-start;
 }
 
-.card-left {
-  flex: 1;
+/* --- Two-image card --- */
+.two-column.dual-image .card-left {
+  flex: 1;                /* smaller column for images */
   display: flex;
-  flex-direction: row;
+  flex-direction: row;    /* images side by side */
   gap: 10px;
 }
 
-.card-left .card-img {
-  width: 50%;
+.two-column.dual-image .card-left .card-img {
+  width: 50%;             /* each image takes half of left column */
   height: auto;
   border-radius: 6px;
+  object-fit: cover;
 }
 
-.card-right {
-  flex: 2;
+.two-column.dual-image .card-right {
+  flex: 2;                /* text gets more space */
+}
+
+/* --- Single-image card --- */
+.two-column.single-image .card-left {
+  flex: 2;                /* give image more space */
+}
+
+.two-column.single-image .card-left .card-img {
+  width: 100%;            /* image fills its larger column */
+  height: auto;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.two-column.single-image .card-right {
+  flex: 1;                /* text takes less space */
 }
