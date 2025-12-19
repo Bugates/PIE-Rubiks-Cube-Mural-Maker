@@ -474,3 +474,26 @@ main{
 .timeline .cube-face.bottom{
   position:absolute;
 }
+
+.two-column {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.card-left {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.card-left .card-img {
+  width: 50%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.card-right {
+  flex: 2;
+}
