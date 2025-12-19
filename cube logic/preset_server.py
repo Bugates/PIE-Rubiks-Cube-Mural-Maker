@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import json
 import socket
 import time
@@ -17,11 +16,6 @@ try:
     HAS_SERIAL = True
 except ImportError:
     HAS_SERIAL = False
-
-
-# =========================================================
-# NETWORK HELPERS
-# =========================================================
 
 def get_local_ip() -> str:
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -46,11 +40,6 @@ def print_qr(url: str) -> None:
         qr.print_ascii(invert=True)
     else:
         print("(Install 'qrcode' Python package to see ASCII QR code.)")
-
-
-# =========================================================
-# SERIAL HELPERS
-# =========================================================
 
 def find_ports() -> List[str]:
     return glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
@@ -197,11 +186,6 @@ def run_serial_commands(commands: List[object]) -> Dict[str, object]:
         log.append("Serial connections closed.")
         print("Serial connections closed.")
         print("Finished.")
-
-
-# =========================================================
-# MOVE / PRESET HELPERS
-# =========================================================
 
 INV_MOVE: Dict[str, str] = {
     'F': "F'", "F'": 'F',
@@ -1346,11 +1330,6 @@ def compute_undo_for_cube(prev_preset: str, pos_key: str) -> Dict[str, object]:
         "undo_serial": undo_serial,
         "undo_orientation": ori,
     }
-
-
-# =========================================================
-# UI (HTML)
-# =========================================================
 
 APP_HTML = r"""<!doctype html>
 <html>
