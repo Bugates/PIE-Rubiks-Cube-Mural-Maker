@@ -26,28 +26,237 @@
 </header>
 
 <div class="container hero">
-    <div class="headingRow">
-      <div class="cubeInline"><div id="cubeMount"></div></div>
-      <h1 class="pageHeading">OFTWARE</h1>
-    </div>
+  <div class="headingRow">
+    <div class="cubeInline"><div id="cubeMount"></div></div>
+    <h1 class="pageHeading">SOFTWARE</h1>
+  </div>
 </div>
 
 <main class="container">
 
   <section class="card section">
     <h2>Software Architecture</h2>
+    <p>
+      The Rubik’s Cube Mural Maker uses a distributed software architecture that
+      separates high-level planning and user interaction from low-level motor control.
+      A Raspberry Pi serves as the central coordinator, while multiple Arduino
+      microcontrollers execute time-critical hardware actions.
+    </p>
+    <p>
+      The Raspberry Pi hosts the web-based user interface, maintains an internal model
+      of the cube state, plans transformation sequences, and manages communication with
+      all connected Arduino boards. The Arduino firmware is responsible only for
+      deterministic motor execution, allowing hardware timing to remain predictable.
+    </p>
+    <p>
+      This separation of concerns simplifies debugging, improves system reliability
+      during live demonstrations, and enables the system to scale across multiple
+      cubes without introducing additional complexity at the firmware level.
+    </p>
   </section>
 
   <section class="card section">
-    <h2>Firmware Design</h2>
+    <h2>User Interface Walkthrough</h2>
+    <p>
+      The user interface is served locally by the Raspberry Pi and accessed through
+      a standard web browser. The interface enforces a structured workflow in which
+      users select predefined patterns, preview target cube configurations, and
+      explicitly manage undo operations before executing new patterns.
+    </p>
+    <p>
+      By constraining user interaction to valid state transitions, the interface
+      reduces the likelihood of invalid cube configurations and ensures that physical
+      execution remains consistent with the software model.
+    </p>
+
+    <div class="uiGrid">
+
+      <figure class="uiFigure">
+        <figcaption>
+          Pattern selection view where users choose predefined mural designs.
+        </figcaption>
+        <a href="#ui1">
+          <img src="media/software/UI_ONE.png" alt="Pattern selection interface">
+        </a>
+      </figure>
+
+      <figure class="uiFigure">
+        <figcaption>
+          Target cube visualization used to preview the expected output before execution.
+        </figcaption>
+        <a href="#ui2">
+          <img src="media/software/UI_TWO.png" alt="Target cube preview">
+        </a>
+      </figure>
+
+      <figure class="uiFigure">
+        <figcaption>
+          Undo selection prompt that resolves state conflicts between previously
+          executed patterns.
+        </figcaption>
+        <a href="#ui3">
+          <img src="media/software/UI_THREE.png" alt="Undo selection interface">
+        </a>
+      </figure>
+
+      <figure class="uiFigure">
+        <figcaption>
+          Execution interface used to send validated commands from the Raspberry Pi
+          to the hardware layer.
+        </figcaption>
+        <a href="#ui4">
+          <img src="media/software/UI_4.png" alt="Execution interface">
+        </a>
+      </figure>
+
+    </div>
+  </section>
+
+  <section class="card section">
+    <h2>Backend Control Logic (Raspberry Pi)</h2>
+    <p>
+      The backend is implemented in Python and runs continuously on the Raspberry Pi.
+      A lightweight HTTP server receives requests from the web interface and translates
+      them into execution actions. This approach avoids the overhead of a full web
+      framework while remaining transparent and easy to debug.
+    </p>
+    <p>
+      The backend dynamically discovers connected serial devices and broadcasts
+      commands to all detected Arduino boards. Internal state tracking ensures that
+      commands are issued in a valid order and prevents conflicting or overlapping
+      pattern executions.
+    </p>
+    <p>
+      All execution requests are serialized to ensure that mechanical actions complete
+      before subsequent commands are sent, maintaining alignment and reducing hardware
+      wear.
+    </p>
+  </section>
+
+  <section class="card section">
+    <h2>Pattern Representation and Execution</h2>
+    <p>
+      Each mural pattern is represented as an ordered sequence of cube face rotations
+      defined relative to a known reference configuration. These sequences are
+      generated offline and stored as presets within the backend.
+    </p>
+    <p>
+      During execution, the Raspberry Pi iterates through the sequence and sends
+      individual motor commands over serial communication. Acknowledgments and
+      time delays are used to ensure that each physical motion completes before the
+      next command is issued.
+    </p>
+    <p>
+      Undo operations are implemented as explicit inverse sequences rather than
+      implicit reversals, allowing the system to reliably return to known states
+      between pattern executions.
+    </p>
+  </section>
+
+  <section class="card section">
+    <h2>Pattern Search and Planning Algorithm</h2>
+    <p>
+      Pattern generation is performed using a depth-first search (DFS) over the space
+      of legal cube moves. Each node in the search corresponds to a cube configuration,
+      and each edge represents a valid face rotation.
+    </p>
+    <p>
+      The DFS explores possible sequences of rotations while tracking visited states
+      to avoid redundant paths. When a sequence producing the desired target
+      configuration is found, the search terminates and the resulting move list is
+      stored as a reusable preset.
+    </p>
+    <p>
+      DFS was selected because pattern generation is performed offline and does not
+      require shortest-path optimality. This approach minimizes memory usage, is
+      straightforward to implement, and produces deterministic sequences that are
+      well-suited for physical execution.
+    </p>
+  </section>
+
+  <section class="card section">
+    <h2>Firmware Design (Arduino)</h2>
+    <p>
+      Two Arduino Uno R4 boards are used to control the eight stepper motors in the
+      system. Each Arduino continuously listens for serial commands from the Raspberry
+      Pi and parses incoming messages into a board identifier, motor identifier, and
+      direction.
+    </p>
+    <p>
+      If the board identifier does not match the current Arduino, the firmware returns
+      a completion signal without taking action. When a command is addressed to the
+      board, the firmware maps the specified motor, sets the direction pins, and
+      executes the motion using microstepping.
+    </p>
+    <p>
+      The stepper drivers are configured for 800 microsteps per revolution. A 90-degree
+      cube rotation is implemented by incrementally stepping the motor in small
+      increments with empirically chosen delays to prevent slipping and reduce
+      mechanical stress.
+    </p>
   </section>
 
   <section class="card section">
     <h2>Source Code and Dependencies</h2>
+    <p>
+      The complete software and firmware for this project is available at:
+    </p>
+    <p>
+      <a href="https://github.com/Bugates/PIE-Rubiks-Cube-Mural-Maker" target="_blank">
+        https://github.com/Bugates/PIE-Rubiks-Cube-Mural-Maker
+      </a>
+    </p>
+
+    <h3>Raspberry Pi Software Dependencies</h3>
+    <ul>
+      <li>Raspberry Pi OS (64-bit)</li>
+      <li>Python 3</li>
+      <li>pyserial</li>
+      <li>qrcode</li>
+      <li>Standard Python libraries: socket, json, time, glob, http.server</li>
+    </ul>
+
+    <h3>Arduino Firmware Dependencies</h3>
+    <ul>
+      <li>Arduino IDE</li>
+      <li>Arduino core libraries</li>
+      <li>Stepper motor driver libraries specific to the hardware used</li>
+    </ul>
   </section>
 
-  <div class="footer">PIE Final · Software</div>
+  <div class="footer">
+    PIE Final · Software
+  </div>
+
 </main>
+
+<div id="ui1" class="lightbox">
+  <a href="javascript:void(0)" aria-label="Close" onclick="location.hash=''">
+    <span>&times;</span>
+  </a>
+  <img src="media/software/UI_ONE.png" alt="">
+</div>
+
+<div id="ui2" class="lightbox">
+  <a href="javascript:void(0)" aria-label="Close" onclick="location.hash=''">
+    <span>&times;</span>
+  </a>
+  <img src="media/software/UI_TWO.png" alt="">
+</div>
+
+<div id="ui3" class="lightbox">
+  <a href="javascript:void(0)" aria-label="Close" onclick="location.hash=''">
+    <span>&times;</span>
+  </a>
+  <img src="media/software/UI_THREE.png" alt="">
+</div>
+
+<div id="ui4" class="lightbox">
+  <a href="javascript:void(0)" aria-label="Close" onclick="location.hash=''">
+    <span>&times;</span>
+  </a>
+  <img src="media/software/UI_4.png" alt="">
+</div>
 
 <script src="js/nav.js"></script>
 <script src="js/cube.js"></script>
