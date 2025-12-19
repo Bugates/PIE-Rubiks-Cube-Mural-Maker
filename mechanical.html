@@ -14,8 +14,10 @@
     .phase-content.active { display:block; }
     /* Remove subsection borders/padding so font matches Electrical page */
     .subsection { margin-top:12px; padding-left:0; border-left:none; }
-    /* Smaller images for subsections */
-    .subsection img { display:block; max-width:200px; height:auto; margin-top:6px; border-radius:6px; }
+    /* Horizontal image row with label */
+    .image-row { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:6px; }
+    .image-row div { text-align:center; }
+    .image-row img { max-width:200px; height:auto; border-radius:6px; display:block; margin-bottom:4px; }
   </style>
 </head>
 
@@ -82,26 +84,56 @@
       <p>
         In this phase, our main concern was developing the solver mechanism. We prototyped a general basis for the Rubik's cube solving using ¼ inch MDF, 3D-printed motor mounts, and tape. Given a mechanical chassis, electrical and software testing could progress.
       </p>
-      <img src="media/stud attachment.png" alt="Phase 1 Stud Attachment">
-      <img src="media/cad-sprint1.png" alt="Phase 1 CAD Sprint">
-      <img src="media/sprint1mech.jpg" alt="Phase 1 Mechanical Sprint">
+      <div class="image-row">
+        <div>
+          <img src="media/stud attachment.png" alt="Phase 1 Stud Attachment">
+          <div>Stud Attachment</div>
+        </div>
+        <div>
+          <img src="media/cad-sprint1.png" alt="Phase 1 CAD Sprint">
+          <div>CAD Sprint</div>
+        </div>
+        <div>
+          <img src="media/sprint1mech.jpg" alt="Phase 1 Mechanical Sprint">
+          <div>Mechanical Sprint</div>
+        </div>
+      </div>
     </div>
 
     <div id="phase2" class="phase-content">
       <p>
         Given the general basis was for software and electrical testing, these phases instead focused on mechanical prototyping, testing many designs for proof of concept.
       </p>
-      <img src="media/relativeslidercad.png" alt="Phase 2 Slider CAD">
-      <img src="media/mdfversion2.jpg" alt="Phase 2 MDF Version 2">
-      <img src="media/mdfversion.png" alt="Phase 2 MDF Version">
+      <div class="image-row">
+        <div>
+          <img src="media/relativeslidercad.png" alt="Phase 2 Slider CAD">
+          <div>Slider CAD</div>
+        </div>
+        <div>
+          <img src="media/mdfversion2.jpg" alt="Phase 2 MDF Version 2">
+          <div>MDF Version 2</div>
+        </div>
+        <div>
+          <img src="media/mdfversion.png" alt="Phase 2 MDF Version">
+          <div>MDF Version</div>
+        </div>
+      </div>
     </div>
 
     <div id="phase4" class="phase-content">
       <p>
         With proof of concept for our mechanisms like the belt and pulley system, we were capable of final prototyping and assembly. This concerned cutting the final acrylic and assembling the final machine for solving the Rubik's cube.
       </p>
-      <img src="media/picture of final box.jpeg" alt="Phase 4 Final Box">
-      <img src="media/penguin.jpeg" alt="Phase 4 Penguin Image">
+      <div class="image-row">
+        <div>
+          <img src="media/picture of final box.jpeg" alt="Phase 4 Final Box">
+          <div>Final Box</div>
+        </div>
+        <div>
+          <img src="media/penguin.jpeg" alt="Phase 4 Penguin Image">
+          <div>Peguin Image</div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -124,8 +156,19 @@
     <div class="subsection">
       <p><strong>Original Motor Mounts vs. Movable Mounts</strong></p>
       <p>
-        Our original motor mount design was stationary and adjustable via screws. While this allowed easy cube insertion, it required manual operation. We redesigned the mounts so that all motors remain stationary relative to the mounts, and the entire mount can move in/out using a pulley system for full automation.
+        Our original motor mount design was stationary and adjustable via screws. While this allowed easy cube insertion, it required manual operation. 
+        We redesigned the mounts so that all motors remain stationary relative to the mounts, and the entire mount can move in/out using a pulley system for full automation.
       </p>
+      <div class="image-row">
+        <div>
+          <img src="media/motor holder compare.png" alt="Original Motor Mounts">
+          <div>Original</div>
+        </div>
+        <div>
+          <img src="media/motor holder compare2.png" alt="Movable Motor Mounts">
+          <div>Movable</div>
+        </div>
+      </div>
     </div>
     
     <div class="subsection">
@@ -133,6 +176,16 @@
       <p>
         We originally had planned to use a bevel gear system with lead screws to move the motor mounts in and out thinking that would offer precise and controlled motion. However, through prototyping, we came to realize that the lead screw implementation created too much friction to offer a smooth controlled motion and more importantly, took up a significant amount of vertical space in the bottom center of the box, needed by the motor which controls the bottom face of the cube. Since the motor needs room to move up and down, the lead screw implementation would interfere with its motion and also would constrain the overall layout. Ultimately, we decided to pivot to a pulley based system which was much more compact, had no interference with the path of movement for the bottom motor, and was much simpler to implement. 
       </p>
+      <div class="image-row">
+        <div>
+          <img src="media/bevel gear.png" alt="Bevel Gear System Prototype">
+          <div>Bevel Gear Prototype</div>
+        </div>
+        <div>
+          <img src="media/bevelgear 2.png" alt="Bevel Gear + Lead Screw + Pulley">
+          <div>Bevel Gear + Lead Screw</div>
+        </div>
+      </div>
     </div>
     
     <div class="subsection">
@@ -140,8 +193,16 @@
       <p>
         Early in the design process, we debated between two different motor to cube attachments: one that inserts directly in the center of the cube face and another that wraps around each face of the cube. While the face gripping attachment seemed appealing, as it wouldn’t require any alteration to the cubes, it required the motors to move out of the way with each rotation to allow for adjacent faces to be able to be turned. This complicated the motion planning algorithm and also introduced issues with the faces jamming during testing due to misalignment. In the end, we went with the center-insert attachment as it allowed rotation of each face without having to retract motors, simplified the algorithm, and was more reliable. However, this design decision did come with the tradeoff that we would have to remove the center pieces of each cube. 
       </p>
-      <img src="media/hook attachment.png" alt="Hook Attachment">
-      <img src="media/stud attachment.png" alt="Stud Attachment">
+      <div class="image-row">
+        <div>
+          <img src="media/hook attachment.png" alt="Hook Attachment">
+          <div>Hook Attachment</div>
+        </div>
+        <div>
+          <img src="media/stud attachment.png" alt="Stud Attachment">
+          <div>Stud Attachment</div>
+        </div>
+      </div>
     </div>
     
     <div class="subsection">
@@ -149,21 +210,21 @@
       <p>
         When designing the mechanism to move the bottom face motor up and down, we explored several lead screw mounting configurations. We debated between mounting the lead screw directly under the motor, so it could push a stage where the motor was mounted up and down, mounting the lead screw motor upside down from the top face of the box, and mounting it along the side of the motor in the bottom housing. After CADing the various options and, we ultimately chose the side-mounted lead screw motor because it minimized the overall height of the system while still providing stable, controlled vertical motion. Mounting the lead screw at the top would have required the motor to be held upside down which would have compromised stability and having it directly below would have interfered with the pulley system. Mounting from the side was the best approach, though it did require a few additional components to help maintain stability since it was being held from one side. 
       </p>
-      <img src="media/leadscre1.jpg" alt="Lead Screw 1">
-      <img src="media/leadscrew3.png" alt="Lead Screw 3">
-      <img src="media/leadscrew2.png" alt="Lead Screw 2">
+      <div class="image-row">
+        <div>
+          <img src="media/leadscre1.jpg" alt="Lead Screw 1">
+          <div>Physical Lead Screw Mechanism</div>
+        </div>
+        <div>
+          <img src="media/leadscrew3.png" alt="Lead Screw 3">
+          <div>Lead Screw Motor Attachment</div>
+        </div>
+        <div>
+          <img src="media/leadscrew2.png" alt="Lead Screw 2">
+          <div>Elevator Prototype</div>
+        </div>
+      </div>
     </div>
-  </section>
-
-  <!-- EXTRA DOCS -->
-  <section class="card section">
-    <h2>Additional Mechanical Documentation</h2>
-    <ul>
-      <li>Bevel gear system prototype</li>
-      <li>Rack-and-pinion mechanism</li>
-      <li>Alternative elevator concepts</li>
-      <li>Ramp-based cube insertion designs</li>
-    </ul>
   </section>
 
   <div class="footer">PIE Final · Mechanical</div>
